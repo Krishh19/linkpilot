@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PACKAGE="com.linkpilot.app"
-ROUTER_ACTIVITY="${PACKAGE}/com.linkpilot.platform.RouterActivity"
+ROUTER_ACTIVITY="${PACKAGE}/com.linkpilot.app.RouterActivity"
 
 echo "=== LinkPilot ADB Test Scenarios ==="
 
