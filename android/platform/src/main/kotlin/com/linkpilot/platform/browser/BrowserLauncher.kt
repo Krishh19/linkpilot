@@ -21,26 +21,14 @@ class BrowserLauncher(private val context: Context) {
             }
 
             if (mode == Mode.PRIVATE) {
-                applyPrivateModeExtras(intent, targetPackage)
+                val capability = BrowserAdapterTable.getCapability(targetPackage)
+                capability.applyPrivateMode(intent)
             }
 
             context.startActivity(intent)
             true
         } catch (_: Exception) {
             false
-        }
-    }
-
-    private fun applyPrivateModeExtras(intent: Intent, targetPackage: String) {
-        when {
-            targetPackage.contains("firefox", ignoreCase = true) -> {
-                intent.putExtra("private_browsing_mode", true)
-            }
-            targetPackage.contains("brave", ignoreCase = true) ||
-            targetPackage.contains("chrome", ignoreCase = true) ||
-            targetPackage.contains("emmx", ignoreCase = true) -> {
-                intent.putExtra("com.google.android.apps.chrome.EXTRA_OPEN_NEW_INCOGNITO_TAB", true)
-            }
         }
     }
 }

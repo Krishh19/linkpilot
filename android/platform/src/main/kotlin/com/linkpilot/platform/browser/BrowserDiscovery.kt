@@ -13,7 +13,8 @@ data class BrowserApp(
     val label: String,
     val icon: Drawable?,
     val isDefault: Boolean = false,
-    val usageCount: Int = 0
+    val usageCount: Int = 0,
+    val privateModeStatus: CapabilityStatus = CapabilityStatus.UNSUPPORTED
 )
 
 class BrowserDiscovery(private val context: Context) {
@@ -58,12 +59,15 @@ class BrowserDiscovery(private val context: Context) {
                 val count = usageCounters[pkg] ?: 0
                 val isDefault = (pkg == defaultPackageName)
 
+                val capability = BrowserAdapterTable.getCapability(pkg)
+
                 uniqueBrowsers[pkg] = BrowserApp(
                     packageName = pkg,
                     label = label,
                     icon = icon,
                     isDefault = isDefault,
-                    usageCount = count
+                    usageCount = count,
+                    privateModeStatus = capability.privateModeStatus
                 )
             }
         }

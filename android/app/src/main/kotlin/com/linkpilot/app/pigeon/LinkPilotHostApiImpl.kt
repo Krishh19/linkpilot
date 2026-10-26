@@ -70,19 +70,12 @@ class LinkPilotHostApiImpl(
         val usageCounters = storageManager.getUsageCounters()
         val installed = browserDiscovery.getInstalledBrowsers(usageCounters)
         return installed.map { browser ->
-            val privateStatus = when {
-                browser.packageName.contains("firefox", ignoreCase = true) -> "VERIFIED"
-                browser.packageName.contains("brave", ignoreCase = true) -> "VERIFIED"
-                browser.packageName.contains("chrome", ignoreCase = true) -> "BEST_EFFORT"
-                browser.packageName.contains("emmx", ignoreCase = true) -> "BEST_EFFORT"
-                else -> "UNSUPPORTED"
-            }
             BrowserPigeon(
                 packageName = browser.packageName,
                 label = browser.label,
                 isDefault = browser.isDefault,
                 usageCount = browser.usageCount.toLong(),
-                privateModeStatus = privateStatus
+                privateModeStatus = browser.privateModeStatus.name
             )
         }
     }
