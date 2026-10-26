@@ -35,11 +35,11 @@ jobs:
       - name: Flutter Tests
         run: flutter test
 
-      - name: Run Core Engine Tests
+      - name: Run Native & Core Unit Tests
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew :core:test --stacktrace
+          ./gradlew :core:test :app:testDebugUnitTest :platform:testDebugUnitTest --stacktrace
 
       - name: Verify No Sensitive Permissions
         run: |
