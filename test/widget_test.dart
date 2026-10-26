@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:linkpilot/data/linkpilot_repository.dart';
+import 'package:linkpilot/features/backup/backup_screen.dart';
 import 'package:linkpilot/features/help/help_screen.dart';
+import 'package:linkpilot/features/history/history_screen.dart';
+import 'package:linkpilot/features/pro/pro_screen.dart';
 import 'package:linkpilot/features/test_url/test_url_screen.dart';
 import 'package:linkpilot/generated/linkpilot_api.g.dart';
 import 'package:linkpilot/main.dart';
@@ -80,8 +83,43 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
     );
   }
 
+  final List<HistoryItemPigeon> history = [];
+  bool proUnlocked = false;
+
   @override
   Future<bool> openInBrowser(String url, String packageName, {String mode = 'NORMAL'}) async => true;
+
+  @override
+  Future<List<HistoryItemPigeon>> getHistory() async => history;
+
+  @override
+  Future<bool> clearHistory() async {
+    history.clear();
+    return true;
+  }
+
+  @override
+  Future<bool> deleteHistoryItem(String id) async {
+    history.removeWhere((h) => h.id == id);
+    return true;
+  }
+
+  @override
+  Future<String> exportBackupJson() async => '{"schemaVersion":1,"rules":[]}';
+
+  @override
+  Future<BackupSummaryPigeon> importBackupJson(String json, {required bool merge}) async {
+    return BackupSummaryPigeon(ruleCount: 0, schemaVersion: 1, success: true);
+  }
+
+  @override
+  Future<bool> isProUnlocked() async => proUnlocked;
+
+  @override
+  Future<bool> setProUnlocked(bool unlocked) async {
+    proUnlocked = unlocked;
+    return true;
+  }
 }
 
 void main() {
@@ -144,5 +182,84 @@ void main() {
 
     expect(find.text('Decision: Direct Launch'), findsOneWidget);
     expect(find.text('Test Rule'), findsOneWidget);
+  });
+
+  testWidgets('HistoryScreen renders disabled state and enables history', (WidgetTester tester) async {
+    final fakeRepo = FakeLinkPilotRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+        child: const MaterialApp(
+          home: HistoryScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('History is Disabled'), findsOneWidget);
+    expect(find.text('Enable Routing History'), findsOneWidget);
+
+    // Tap Enable
+    await tester.tap(find.text('Enable Routing History'));
+    await tester.pumpAndSettle();
+
+    expect(fakeRepo.settings.historyEnabled, isTrue);
+    expect(find.text('No routed links in history yet.'), findsOneWidget);
+  });
+
+  testWidgets('BackupScreen renders export and import cards', (WidgetTester tester) async {
+    final fakeRepo = FakeLinkPilotRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+        child: const MaterialApp(
+          home: BackupScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Export Configuration'), findsOneWidget);
+    expect(find.text('Import Configuration'), findsOneWidget);
+    expect(find.text('Export Rules & Settings'), findsOneWidget);
+    expect(find.text('Merge with Existing'), findsOneWidget);
+    expect(find.text('Replace All'), findsOneWidget);
+  });
+
+  testWidgets('ProScreen renders features and handles unlock', (WidgetTester tester) async {
+    final fakeRepo = FakeLinkPilotRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+        child: const MaterialApp(
+          home: ProScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upgrade to LinkPilot Pro'), findsOneWidget);
+    expect(find.text('Saved Routing Rules'), findsOneWidget);
+
+    final unlockFinder = find.text('Unlock Pro (One-Time Purchase)');
+    await tester.scrollUntilVisible(unlockFinder, 200);
+
+    expect(unlockFinder, findsOneWidget);
+
+    // Tap unlock
+    await tester.tap(unlockFinder);
+    await tester.pumpAndSettle();
+
+    expect(fakeRepo.proUnlocked, isTrue);
+    expect(find.text('LinkPilot Pro Active'), findsOneWidget);
   });
 }

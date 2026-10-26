@@ -111,7 +111,38 @@ class _RulesScreenState extends ConsumerState<RulesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/rules/new'),
+        onPressed: () {
+          final isPro = ref.read(proStatusProvider).value ?? false;
+          final ruleCount = rulesAsync.value?.length ?? 0;
+
+          if (!isPro && ruleCount >= 5) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Free Tier Limit (5 Rules)'),
+                content: const Text(
+                  'The free tier includes up to 5 routing rules. Upgrade to LinkPilot Pro for unlimited rules, source-app rules, and automated private tabs.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Later'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      context.push('/pro');
+                    },
+                    child: const Text('View Pro'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          context.push('/rules/new');
+        },
         icon: const Icon(Icons.add),
         label: const Text('Add Rule'),
       ),

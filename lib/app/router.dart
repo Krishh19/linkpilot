@@ -1,10 +1,13 @@
 import 'package:go_router/go_router.dart';
 import 'package:linkpilot/features/about/about_screen.dart';
+import 'package:linkpilot/features/backup/backup_screen.dart';
 import 'package:linkpilot/features/browsers/browsers_screen.dart';
 import 'package:linkpilot/features/cleaner/cleaner_screen.dart';
 import 'package:linkpilot/features/help/help_screen.dart';
+import 'package:linkpilot/features/history/history_screen.dart';
 import 'package:linkpilot/features/home/home_screen.dart';
 import 'package:linkpilot/features/onboarding/onboarding_screen.dart';
+import 'package:linkpilot/features/pro/pro_screen.dart';
 import 'package:linkpilot/features/rules/rule_editor_screen.dart';
 import 'package:linkpilot/features/rules/rules_screen.dart';
 import 'package:linkpilot/features/test_url/test_url_screen.dart';
@@ -38,6 +41,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/cleaner',
       builder: (context, state) => const CleanerScreen(),
+    ),
+    GoRoute(
+      path: '/history',
+      builder: (context, state) => const HistoryScreen(),
+    ),
+    GoRoute(
+      path: '/backup',
+      builder: (context, state) => const BackupScreen(),
+    ),
+    GoRoute(
+      path: '/pro',
+      builder: (context, state) => const ProScreen(),
     ),
     GoRoute(
       path: '/test-url',

@@ -451,6 +451,104 @@ data class RoutingResultPigeon (
     return "RoutingResultPigeon(cleanedUrl=$cleanedUrl, originalUrl=$originalUrl, removedParams=$removedParams, sourcePackage=$sourcePackage, decisionType=$decisionType, matchedRuleId=$matchedRuleId, matchedRuleName=$matchedRuleName, targetPackage=$targetPackage, mode=$mode, pickerReason=$pickerReason)"
   }
 }
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class HistoryItemPigeon (
+  val id: String,
+  val url: String,
+  val targetPackage: String,
+  val timestampEpochMs: Long
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): HistoryItemPigeon {
+      val id = pigeonVar_list[0] as String
+      val url = pigeonVar_list[1] as String
+      val targetPackage = pigeonVar_list[2] as String
+      val timestampEpochMs = pigeonVar_list[3] as Long
+      return HistoryItemPigeon(id, url, targetPackage, timestampEpochMs)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      id,
+      url,
+      targetPackage,
+      timestampEpochMs,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as HistoryItemPigeon
+    return LinkPilotApiPigeonUtils.deepEquals(this.id, other.id) && LinkPilotApiPigeonUtils.deepEquals(this.url, other.url) && LinkPilotApiPigeonUtils.deepEquals(this.targetPackage, other.targetPackage) && LinkPilotApiPigeonUtils.deepEquals(this.timestampEpochMs, other.timestampEpochMs)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.id)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.url)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.targetPackage)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.timestampEpochMs)
+    return result
+  }
+  override fun toString(): String {
+    return "HistoryItemPigeon(id=$id, url=$url, targetPackage=$targetPackage, timestampEpochMs=$timestampEpochMs)"
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
+data class BackupSummaryPigeon (
+  val ruleCount: Long,
+  val schemaVersion: Long,
+  val success: Boolean,
+  val errorMessage: String? = null
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): BackupSummaryPigeon {
+      val ruleCount = pigeonVar_list[0] as Long
+      val schemaVersion = pigeonVar_list[1] as Long
+      val success = pigeonVar_list[2] as Boolean
+      val errorMessage = pigeonVar_list[3] as String?
+      return BackupSummaryPigeon(ruleCount, schemaVersion, success, errorMessage)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      ruleCount,
+      schemaVersion,
+      success,
+      errorMessage,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as BackupSummaryPigeon
+    return LinkPilotApiPigeonUtils.deepEquals(this.ruleCount, other.ruleCount) && LinkPilotApiPigeonUtils.deepEquals(this.schemaVersion, other.schemaVersion) && LinkPilotApiPigeonUtils.deepEquals(this.success, other.success) && LinkPilotApiPigeonUtils.deepEquals(this.errorMessage, other.errorMessage)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.ruleCount)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.schemaVersion)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.success)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.errorMessage)
+    return result
+  }
+  override fun toString(): String {
+    return "BackupSummaryPigeon(ruleCount=$ruleCount, schemaVersion=$schemaVersion, success=$success, errorMessage=$errorMessage)"
+  }
+}
 private open class LinkPilotApiPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -474,6 +572,16 @@ private open class LinkPilotApiPigeonCodec : StandardMessageCodec() {
           RoutingResultPigeon.fromList(it)
         }
       }
+      133.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          HistoryItemPigeon.fromList(it)
+        }
+      }
+      134.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          BackupSummaryPigeon.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -495,6 +603,14 @@ private open class LinkPilotApiPigeonCodec : StandardMessageCodec() {
         stream.write(132)
         writeValue(stream, value.toList())
       }
+      is HistoryItemPigeon -> {
+        stream.write(133)
+        writeValue(stream, value.toList())
+      }
+      is BackupSummaryPigeon -> {
+        stream.write(134)
+        writeValue(stream, value.toList())
+      }
       else -> super.writeValue(stream, value)
     }
   }
@@ -511,6 +627,13 @@ interface LinkPilotHostApi {
   fun requestDefaultBrowserRole(): Boolean
   fun testRouteUrl(url: String, sourcePackage: String?): RoutingResultPigeon
   fun openInBrowser(url: String, packageName: String, mode: String): Boolean
+  fun getHistory(): List<HistoryItemPigeon>
+  fun clearHistory(): Boolean
+  fun deleteHistoryItem(id: String): Boolean
+  fun exportBackupJson(): String
+  fun importBackupJson(json: String, merge: Boolean): BackupSummaryPigeon
+  fun isProUnlocked(): Boolean
+  fun setProUnlocked(unlocked: Boolean): Boolean
 
   companion object {
     /** The codec used by LinkPilotHostApi. */
@@ -658,6 +781,118 @@ interface LinkPilotHostApi {
             val modeArg = args[2] as String
             val wrapped: List<Any?> = try {
               listOf(api.openInBrowser(urlArg, packageNameArg, modeArg))
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.getHistory$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.getHistory())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.clearHistory$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.clearHistory())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.deleteHistoryItem$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val idArg = args[0] as String
+            val wrapped: List<Any?> = try {
+              listOf(api.deleteHistoryItem(idArg))
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.exportBackupJson$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.exportBackupJson())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.importBackupJson$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val jsonArg = args[0] as String
+            val mergeArg = args[1] as Boolean
+            val wrapped: List<Any?> = try {
+              listOf(api.importBackupJson(jsonArg, mergeArg))
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isProUnlocked$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.isProUnlocked())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setProUnlocked$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val unlockedArg = args[0] as Boolean
+            val wrapped: List<Any?> = try {
+              listOf(api.setProUnlocked(unlockedArg))
             } catch (exception: Throwable) {
               LinkPilotApiPigeonUtils.wrapError(exception)
             }

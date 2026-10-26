@@ -92,3 +92,48 @@ class SettingsNotifier extends AsyncNotifier<SettingsPigeon> {
 }
 
 final settingsProvider = AsyncNotifierProvider<SettingsNotifier, SettingsPigeon>(SettingsNotifier.new);
+
+class HistoryNotifier extends AsyncNotifier<List<HistoryItemPigeon>> {
+  @override
+  Future<List<HistoryItemPigeon>> build() async {
+    final repo = ref.watch(linkPilotRepositoryProvider);
+    final history = await repo.getHistory();
+    // Sort descending by timestamp
+    history.sort((a, b) => b.timestampEpochMs.compareTo(a.timestampEpochMs));
+    return history;
+  }
+
+  Future<void> clearHistory() async {
+    state = const AsyncLoading();
+    final repo = ref.read(linkPilotRepositoryProvider);
+    await repo.clearHistory();
+    state = const AsyncData([]);
+  }
+
+  Future<void> deleteItem(String id) async {
+    final current = state.value ?? [];
+    final updated = current.where((h) => h.id != id).toList();
+    state = AsyncData(updated);
+    final repo = ref.read(linkPilotRepositoryProvider);
+    await repo.deleteHistoryItem(id);
+  }
+}
+
+final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<HistoryItemPigeon>>(HistoryNotifier.new);
+
+class ProStatusNotifier extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() async {
+    final repo = ref.watch(linkPilotRepositoryProvider);
+    return repo.isProUnlocked();
+  }
+
+  Future<void> setUnlocked(bool unlocked) async {
+    state = const AsyncLoading();
+    final repo = ref.read(linkPilotRepositoryProvider);
+    await repo.setProUnlocked(unlocked);
+    state = AsyncData(unlocked);
+  }
+}
+
+final proStatusProvider = AsyncNotifierProvider<ProStatusNotifier, bool>(ProStatusNotifier.new);

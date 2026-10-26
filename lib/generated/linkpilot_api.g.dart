@@ -417,6 +417,126 @@ class RoutingResultPigeon {
   }
 }
 
+class HistoryItemPigeon {
+  HistoryItemPigeon({
+    required this.id,
+    required this.url,
+    required this.targetPackage,
+    required this.timestampEpochMs,
+  });
+
+  String id;
+
+  String url;
+
+  String targetPackage;
+
+  int timestampEpochMs;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      id,
+      url,
+      targetPackage,
+      timestampEpochMs,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static HistoryItemPigeon decode(Object result) {
+    result as List<Object?>;
+    return HistoryItemPigeon(
+      id: result[0]! as String,
+      url: result[1]! as String,
+      targetPackage: result[2]! as String,
+      timestampEpochMs: result[3]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! HistoryItemPigeon || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(id, other.id) && _deepEquals(url, other.url) && _deepEquals(targetPackage, other.targetPackage) && _deepEquals(timestampEpochMs, other.timestampEpochMs);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'HistoryItemPigeon(id: $id, url: $url, targetPackage: $targetPackage, timestampEpochMs: $timestampEpochMs)';
+  }
+}
+
+class BackupSummaryPigeon {
+  BackupSummaryPigeon({
+    required this.ruleCount,
+    required this.schemaVersion,
+    required this.success,
+    this.errorMessage,
+  });
+
+  int ruleCount;
+
+  int schemaVersion;
+
+  bool success;
+
+  String? errorMessage;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      ruleCount,
+      schemaVersion,
+      success,
+      errorMessage,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static BackupSummaryPigeon decode(Object result) {
+    result as List<Object?>;
+    return BackupSummaryPigeon(
+      ruleCount: result[0]! as int,
+      schemaVersion: result[1]! as int,
+      success: result[2]! as bool,
+      errorMessage: result[3] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! BackupSummaryPigeon || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(ruleCount, other.ruleCount) && _deepEquals(schemaVersion, other.schemaVersion) && _deepEquals(success, other.success) && _deepEquals(errorMessage, other.errorMessage);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'BackupSummaryPigeon(ruleCount: $ruleCount, schemaVersion: $schemaVersion, success: $success, errorMessage: $errorMessage)';
+  }
+}
+
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -437,6 +557,12 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is RoutingResultPigeon) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
+    }    else if (value is HistoryItemPigeon) {
+      buffer.putUint8(133);
+      writeValue(buffer, value.encode());
+    }    else if (value is BackupSummaryPigeon) {
+      buffer.putUint8(134);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -453,6 +579,10 @@ class _PigeonCodec extends StandardMessageCodec {
         return BrowserPigeon.decode(readValue(buffer)!);
       case 132:
         return RoutingResultPigeon.decode(readValue(buffer)!);
+      case 133:
+        return HistoryItemPigeon.decode(readValue(buffer)!);
+      case 134:
+        return BackupSummaryPigeon.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -636,6 +766,139 @@ class LinkPilotHostApi {
       binaryMessenger: pigeonVar_binaryMessenger,
     );
     final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[url, packageName, mode]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<List<HistoryItemPigeon>> getHistory() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.getHistory$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return (pigeonVar_replyValue! as List<Object?>).cast<HistoryItemPigeon>();
+  }
+
+  Future<bool> clearHistory() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.clearHistory$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<bool> deleteHistoryItem(String id) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.deleteHistoryItem$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[id]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<String> exportBackupJson() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.exportBackupJson$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as String;
+  }
+
+  Future<BackupSummaryPigeon> importBackupJson(String json, bool merge) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.importBackupJson$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[json, merge]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as BackupSummaryPigeon;
+  }
+
+  Future<bool> isProUnlocked() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isProUnlocked$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<bool> setProUnlocked(bool unlocked) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setProUnlocked$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[unlocked]);
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(

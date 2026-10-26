@@ -96,6 +96,34 @@ class RoutingResultPigeon {
   String? pickerReason;
 }
 
+class HistoryItemPigeon {
+  HistoryItemPigeon({
+    required this.id,
+    required this.url,
+    required this.targetPackage,
+    required this.timestampEpochMs,
+  });
+
+  String id;
+  String url;
+  String targetPackage;
+  int timestampEpochMs;
+}
+
+class BackupSummaryPigeon {
+  BackupSummaryPigeon({
+    required this.ruleCount,
+    required this.schemaVersion,
+    required this.success,
+    this.errorMessage,
+  });
+
+  int ruleCount;
+  int schemaVersion;
+  bool success;
+  String? errorMessage;
+}
+
 @HostApi()
 abstract class LinkPilotHostApi {
   List<RulePigeon> getRules();
@@ -107,4 +135,17 @@ abstract class LinkPilotHostApi {
   bool requestDefaultBrowserRole();
   RoutingResultPigeon testRouteUrl(String url, String? sourcePackage);
   bool openInBrowser(String url, String packageName, String mode);
+
+  // History & Purge (FR-H)
+  List<HistoryItemPigeon> getHistory();
+  bool clearHistory();
+  bool deleteHistoryItem(String id);
+
+  // Backup & Restore (FR-I)
+  String exportBackupJson();
+  BackupSummaryPigeon importBackupJson(String json, bool merge);
+
+  // Pro & Free Tier (FR-J)
+  bool isProUnlocked();
+  bool setProUnlocked(bool unlocked);
 }

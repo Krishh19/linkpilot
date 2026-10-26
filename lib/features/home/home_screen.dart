@@ -157,10 +157,36 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildMetricCard(
                     context,
-                    title: 'Onboarding',
-                    subtitle: 'Setup walkthrough',
-                    icon: Icons.school_outlined,
-                    onTap: () => context.push('/onboarding'),
+                    title: 'History',
+                    subtitle: 'Opt-in routed links',
+                    icon: Icons.history,
+                    onTap: () => context.push('/history'),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    title: 'Backup',
+                    subtitle: 'Export & restore JSON',
+                    icon: Icons.backup_outlined,
+                    onTap: () => context.push('/backup'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    context,
+                    title: 'Pro',
+                    subtitle: 'Unlimited & offline',
+                    icon: Icons.workspace_premium_outlined,
+                    onTap: () => context.push('/pro'),
                   ),
                 ),
               ],

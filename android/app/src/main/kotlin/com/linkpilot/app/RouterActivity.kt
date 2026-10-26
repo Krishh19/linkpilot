@@ -85,6 +85,7 @@ class RouterActivity : ComponentActivity() {
                     val launched = browserLauncher.launch(routingResult.cleanedUrl, targetPkg, mode)
                     if (launched) {
                         storageManager.incrementUsage(targetPkg)
+                        storageManager.addHistoryItem(routingResult.cleanedUrl, targetPkg)
                         finishQuietly()
                         return
                     }
@@ -201,6 +202,7 @@ class RouterActivity : ComponentActivity() {
 
         browserLauncher.launch(urlToOpen, selectedPkg, mode)
         storageManager.incrementUsage(selectedPkg)
+        storageManager.addHistoryItem(urlToOpen, selectedPkg)
         finishQuietly()
     }
 

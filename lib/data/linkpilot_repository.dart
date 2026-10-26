@@ -50,4 +50,32 @@ class LinkPilotRepository {
   Future<bool> openInBrowser(String url, String packageName, {String mode = 'NORMAL'}) async {
     return _api.openInBrowser(url, packageName, mode);
   }
+
+  Future<List<HistoryItemPigeon>> getHistory() async {
+    return _api.getHistory();
+  }
+
+  Future<bool> clearHistory() async {
+    return _api.clearHistory();
+  }
+
+  Future<bool> deleteHistoryItem(String id) async {
+    return _api.deleteHistoryItem(id);
+  }
+
+  Future<String> exportBackupJson() async {
+    return _api.exportBackupJson();
+  }
+
+  Future<BackupSummaryPigeon> importBackupJson(String json, {required bool merge}) async {
+    return _api.importBackupJson(json, merge);
+  }
+
+  Future<bool> isProUnlocked() async {
+    return _api.isProUnlocked();
+  }
+
+  Future<bool> setProUnlocked(bool unlocked) async {
+    return _api.setProUnlocked(unlocked);
+  }
 }

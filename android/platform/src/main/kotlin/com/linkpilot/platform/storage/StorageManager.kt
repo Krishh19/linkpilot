@@ -4,10 +4,29 @@ import android.content.Context
 import com.linkpilot.core.model.CleanerConfig
 import com.linkpilot.core.model.Rule
 import com.linkpilot.core.model.Settings
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
+
+@Serializable
+data class HistoryEntry(
+    val id: String,
+    val url: String,
+    val targetPackage: String,
+    val timestampEpochMs: Long
+)
+
+@Serializable
+data class BackupPayload(
+    val schemaVersion: Int = 1,
+    val exportedAtEpochMs: Long,
+    val rules: List<Rule>,
+    val settings: Settings,
+    val usageCounters: Map<String, Int>
+)
 
 class StorageManager(private val context: Context) {
 
@@ -20,12 +39,15 @@ class StorageManager(private val context: Context) {
     private val rulesFile = File(context.filesDir, "rules.json")
     private val settingsFile = File(context.filesDir, "settings.json")
     private val usageCountersFile = File(context.filesDir, "usage_counters.json")
+    private val historyFile = File(context.filesDir, "history.json")
+    private val proPrefs = context.getSharedPreferences("linkpilot_pro", Context.MODE_PRIVATE)
 
     // In-memory atomic cached snapshots for instant read
     private val cachedRules = AtomicReference<List<Rule>>(null)
     private val cachedSettings = AtomicReference<Settings>(null)
     private val cachedCleanerConfig = AtomicReference<CleanerConfig>(null)
     private val cachedUsageCounters = AtomicReference<Map<String, Int>>(null)
+    private val cachedHistory = AtomicReference<List<HistoryEntry>>(null)
 
     fun getRules(): List<Rule> {
         val cached = cachedRules.get()
@@ -123,6 +145,123 @@ class StorageManager(private val context: Context) {
             val content = json.encodeToString(current)
             writeAtomically(usageCountersFile, content)
             cachedUsageCounters.set(current)
+        }
+    }
+
+    // --- History & Auto-Purge (FR-H) ---
+
+    fun getHistory(): List<HistoryEntry> {
+        val cached = cachedHistory.get()
+        if (cached != null) return cached
+
+        val loaded = synchronized(historyFile) {
+            if (historyFile.exists()) {
+                try {
+                    val entries = json.decodeFromString<List<HistoryEntry>>(historyFile.readText())
+                    val settings = getSettings()
+                    purgeOldHistory(entries, settings.historyRetentionDays)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+        }
+        cachedHistory.set(loaded)
+        return loaded
+    }
+
+    fun addHistoryItem(url: String, targetPackage: String) {
+        val settings = getSettings()
+        if (!settings.historyEnabled) return
+
+        synchronized(historyFile) {
+            val now = System.currentTimeMillis()
+            val newEntry = HistoryEntry(
+                id = UUID.randomUUID().toString(),
+                url = url,
+                targetPackage = targetPackage,
+                timestampEpochMs = now
+            )
+            val current = getHistory()
+            val updated = purgeOldHistory(listOf(newEntry) + current, settings.historyRetentionDays)
+            val content = json.encodeToString(updated)
+            writeAtomically(historyFile, content)
+            cachedHistory.set(updated)
+        }
+    }
+
+    fun clearHistory(): Boolean {
+        synchronized(historyFile) {
+            if (historyFile.exists()) {
+                historyFile.delete()
+            }
+            cachedHistory.set(emptyList())
+            return true
+        }
+    }
+
+    fun deleteHistoryItem(id: String): Boolean {
+        synchronized(historyFile) {
+            val current = getHistory().filterNot { it.id == id }
+            val content = json.encodeToString(current)
+            writeAtomically(historyFile, content)
+            cachedHistory.set(current)
+            return true
+        }
+    }
+
+    private fun purgeOldHistory(entries: List<HistoryEntry>, retentionDays: Int): List<HistoryEntry> {
+        val cutoff = System.currentTimeMillis() - (retentionDays.coerceAtLeast(1) * 86_400_000L)
+        return entries.filter { it.timestampEpochMs >= cutoff }
+    }
+
+    // --- Pro Status (FR-J) ---
+
+    fun isProUnlocked(): Boolean {
+        return proPrefs.getBoolean("pro_unlocked", false)
+    }
+
+    fun setProUnlocked(unlocked: Boolean): Boolean {
+        proPrefs.edit().putBoolean("pro_unlocked", unlocked).apply()
+        return true
+    }
+
+    // --- Backup & Restore (FR-I) ---
+
+    fun exportBackupJson(): String {
+        val payload = BackupPayload(
+            schemaVersion = 1,
+            exportedAtEpochMs = System.currentTimeMillis(),
+            rules = getRules(),
+            settings = getSettings(),
+            usageCounters = getUsageCounters()
+        )
+        return json.encodeToString(payload)
+    }
+
+    fun importBackupJson(jsonString: String, merge: Boolean): Pair<Int, Boolean> {
+        return try {
+            val payload = json.decodeFromString<BackupPayload>(jsonString)
+            if (payload.schemaVersion > 1) {
+                // Unsupported newer schema version
+                return Pair(0, false)
+            }
+
+            if (merge) {
+                val existingRules = getRules()
+                val existingIds = existingRules.map { it.id }.toSet()
+                val newRules = payload.rules.filterNot { it.id in existingIds }
+                val merged = existingRules + newRules
+                saveRules(merged)
+                Pair(merged.size, true)
+            } else {
+                saveRules(payload.rules)
+                saveSettings(payload.settings)
+                Pair(payload.rules.size, true)
+            }
+        } catch (_: Exception) {
+            Pair(0, false)
         }
     }
 

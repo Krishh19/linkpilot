@@ -190,6 +190,47 @@ class LinkPilotHostApiImpl(
         return launched
     }
 
+    override fun getHistory(): List<HistoryItemPigeon> {
+        return storageManager.getHistory().map {
+            HistoryItemPigeon(
+                id = it.id,
+                url = it.url,
+                targetPackage = it.targetPackage,
+                timestampEpochMs = it.timestampEpochMs
+            )
+        }
+    }
+
+    override fun clearHistory(): Boolean {
+        return storageManager.clearHistory()
+    }
+
+    override fun deleteHistoryItem(id: String): Boolean {
+        return storageManager.deleteHistoryItem(id)
+    }
+
+    override fun exportBackupJson(): String {
+        return storageManager.exportBackupJson()
+    }
+
+    override fun importBackupJson(json: String, merge: Boolean): BackupSummaryPigeon {
+        val (ruleCount, success) = storageManager.importBackupJson(json, merge)
+        return BackupSummaryPigeon(
+            ruleCount = ruleCount.toLong(),
+            schemaVersion = 1L,
+            success = success,
+            errorMessage = if (success) null else "Failed to parse or validate backup JSON"
+        )
+    }
+
+    override fun isProUnlocked(): Boolean {
+        return storageManager.isProUnlocked()
+    }
+
+    override fun setProUnlocked(unlocked: Boolean): Boolean {
+        return storageManager.setProUnlocked(unlocked)
+    }
+
     private fun toPigeon(rule: Rule): RulePigeon {
         val actionType = when (rule.action) {
             is Action.OpenInBrowser -> "browser"
