@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="open_copied_link"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_open_copied_link_short"
+        android:shortcutLongLabel="@string/shortcut_open_copied_link_long">
+        <intent
+            android:action="com.linkpilot.OPEN_COPIED_LINK"
+            android:targetPackage="com.linkpilot.app"
+            android:targetClass="com.linkpilot.app.RouterActivity" />
+    </shortcut>
+</shortcuts>

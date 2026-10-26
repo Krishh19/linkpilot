@@ -31,6 +31,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+
+            <!-- App Shortcut Action for Opening Copied Link -->
+            <intent-filter>
+                <action android:name="com.linkpilot.OPEN_COPIED_LINK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- MainActivity: Flutter Settings, Rules Editor, Onboarding, and Testing UI -->
@@ -46,11 +52,26 @@
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme" />
+            <meta-data
+              android:name="android.app.shortcuts"
+              android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Quick Settings Tile for Open Copied Link (reads clipboard only on user tap) -->
+        <service
+            android:name=".tile.LinkPilotTileService"
+            android:label="@string/tile_open_copied_link"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <meta-data
             android:name="flutterEmbedding"

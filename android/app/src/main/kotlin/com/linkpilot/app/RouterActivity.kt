@@ -1,5 +1,6 @@
 package com.linkpilot.app
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -92,6 +93,7 @@ class RouterActivity : ComponentActivity() {
                 // If launch failed, fall back to picker with error notice
                 showPicker(
                     cleanedUrl = routingResult.cleanedUrl,
+                    originalUrl = routingResult.originalUrl,
                     removedParams = routingResult.removedParams,
                     sourcePackage = sourcePackage,
                     launchError = "Could not open with the chosen app. Please pick a browser."
@@ -101,6 +103,7 @@ class RouterActivity : ComponentActivity() {
             is Decision.ShowPicker -> {
                 showPicker(
                     cleanedUrl = routingResult.cleanedUrl,
+                    originalUrl = routingResult.originalUrl,
                     removedParams = routingResult.removedParams,
                     sourcePackage = sourcePackage,
                     launchError = null
@@ -111,6 +114,7 @@ class RouterActivity : ComponentActivity() {
 
     private fun showPicker(
         cleanedUrl: String,
+        originalUrl: String,
         removedParams: List<String>,
         sourcePackage: String?,
         launchError: String?
@@ -128,13 +132,14 @@ class RouterActivity : ComponentActivity() {
             MaterialTheme {
                 PickerBottomSheet(
                     cleanedUrl = cleanedUrl,
+                    originalUrl = originalUrl,
                     removedParams = removedParams,
                     sourcePackage = sourcePackage,
                     browsers = browsers,
                     launchErrorMessage = launchError,
-                    onSelect = { selectedPkg, mode, choice ->
+                    onSelect = { selectedPkg, mode, choice, urlToOpen ->
                         handleUserChoice(
-                            cleanedUrl = cleanedUrl,
+                            urlToOpen = urlToOpen,
                             sourcePackage = sourcePackage,
                             selectedPkg = selectedPkg,
                             mode = mode,
@@ -150,7 +155,7 @@ class RouterActivity : ComponentActivity() {
     }
 
     private fun handleUserChoice(
-        cleanedUrl: String,
+        urlToOpen: String,
         sourcePackage: String?,
         selectedPkg: String,
         mode: Mode,
@@ -162,7 +167,7 @@ class RouterActivity : ComponentActivity() {
             }
 
             RuleCreationChoice.ALWAYS_THIS_SITE -> {
-                val parsed = ParsedUrl.parse(cleanedUrl)
+                val parsed = ParsedUrl.parse(urlToOpen)
                 if (parsed != null) {
                     val domainPattern = "*.${parsed.asciiHost}"
                     val newRule = Rule(
@@ -194,7 +199,7 @@ class RouterActivity : ComponentActivity() {
             }
         }
 
-        browserLauncher.launch(cleanedUrl, selectedPkg, mode)
+        browserLauncher.launch(urlToOpen, selectedPkg, mode)
         storageManager.incrementUsage(selectedPkg)
         finishQuietly()
     }
@@ -205,19 +210,38 @@ class RouterActivity : ComponentActivity() {
             return intent.dataString
         } else if (action == Intent.ACTION_SEND) {
             val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return null
-            // Extract first http or https URL from shared text
+            // Extract first http or https URL from shared text (FR-G1)
             val regex = Regex("https?://[^\\s]+")
             return regex.find(text)?.value
+        } else if (action == "com.linkpilot.OPEN_COPIED_LINK") {
+            // Read clipboard on explicit user tap only (FR-G2)
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            val clip = clipboard?.primaryClip
+            val text = if (clip != null && clip.itemCount > 0) {
+                clip.getItemAt(0)?.coerceToText(this)?.toString()
+            } else {
+                null
+            }
+            val foundUrl = if (!text.isNullOrBlank()) {
+                Regex("https?://[^\\s]+").find(text)?.value
+            } else {
+                null
+            }
+            if (foundUrl.isNullOrBlank()) {
+                android.widget.Toast.makeText(this, getString(R.string.no_link_on_clipboard), android.widget.Toast.LENGTH_SHORT).show()
+                return null
+            }
+            return foundUrl
         }
         return null
     }
 
     private fun extractSourcePackage(): String? {
-        val referrer: Uri? = referrer
-        if (referrer != null && referrer.scheme == "android-app") {
-            return referrer.authority
+        val referrerUri: Uri? = referrer
+        if (referrerUri != null && referrerUri.scheme == "android-app") {
+            return referrerUri.authority ?: referrerUri.host
         }
-        return null
+        return callingPackage
     }
 
     private fun finishQuietly() {

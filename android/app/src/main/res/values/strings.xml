@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LinkPilot</string>
+    <string name="tile_open_copied_link">Open copied link</string>
+    <string name="shortcut_open_copied_link_short">Open copied</string>
+    <string name="shortcut_open_copied_link_long">Open copied link from clipboard</string>
+    <string name="no_link_on_clipboard">No link found on clipboard</string>
+</resources>

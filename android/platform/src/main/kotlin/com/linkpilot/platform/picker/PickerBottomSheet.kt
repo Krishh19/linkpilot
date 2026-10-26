@@ -8,9 +8,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,14 +72,16 @@ enum class RuleCreationChoice {
     ALWAYS_THIS_APP
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PickerBottomSheet(
     cleanedUrl: String,
+    originalUrl: String? = null,
     removedParams: List<String>,
     sourcePackage: String?,
     browsers: List<BrowserApp>,
     launchErrorMessage: String? = null,
-    onSelect: (pkg: String, mode: Mode, choice: RuleCreationChoice) -> Unit,
+    onSelect: (pkg: String, mode: Mode, choice: RuleCreationChoice, urlToOpen: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -84,6 +89,9 @@ fun PickerBottomSheet(
         mutableStateOf(browsers.firstOrNull()?.packageName)
     }
     var isPrivateMode by remember { mutableStateOf(false) }
+    var useOriginalUrl by remember { mutableStateOf(false) }
+
+    val activeUrl = if (useOriginalUrl && !originalUrl.isNullOrBlank()) originalUrl else cleanedUrl
 
     Box(
         modifier = Modifier
@@ -125,29 +133,47 @@ fun PickerBottomSheet(
                     )
                 }
 
-                // Cleaner Notice
+                // Cleaner Notice & Open Original Action (FR-B5)
                 if (removedParams.isNotEmpty()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Cleaned",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Cleaned ${removedParams.size} tracking parameter${if (removedParams.size > 1) "s" else ""}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Cleaned",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Cleaned ${removedParams.size} tracking parameter${if (removedParams.size > 1) "s" else ""}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        if (!originalUrl.isNullOrBlank() && originalUrl != cleanedUrl) {
+                            TextButton(
+                                onClick = { useOriginalUrl = !useOriginalUrl }
+                            ) {
+                                Text(
+                                    text = if (useOriginalUrl) "Use Cleaned" else "Open Original",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -159,7 +185,7 @@ fun PickerBottomSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = cleanedUrl,
+                        text = activeUrl,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -170,14 +196,14 @@ fun PickerBottomSheet(
                     IconButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("URL", cleanedUrl))
+                            clipboard.setPrimaryClip(ClipData.newPlainText("URL", activeUrl))
                             Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy cleaned link",
+                            contentDescription = "Copy link",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -186,7 +212,7 @@ fun PickerBottomSheet(
                         onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, cleanedUrl)
+                                putExtra(Intent.EXTRA_TEXT, activeUrl)
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share link"))
                         },
@@ -194,7 +220,7 @@ fun PickerBottomSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share cleaned link",
+                            contentDescription = "Share link",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -212,7 +238,11 @@ fun PickerBottomSheet(
                         BrowserItem(
                             browser = browser,
                             isSelected = isSelected,
-                            onSelect = { selectedPackage = browser.packageName }
+                            onSelect = { selectedPackage = browser.packageName },
+                            onLongPressPrivate = {
+                                selectedPackage = browser.packageName
+                                onSelect(browser.packageName, Mode.PRIVATE, RuleCreationChoice.JUST_ONCE, activeUrl)
+                            }
                         )
                     }
                 }
@@ -249,7 +279,7 @@ fun PickerBottomSheet(
                 Button(
                     onClick = {
                         val pkg = selectedPackage ?: browsers.firstOrNull()?.packageName ?: return@Button
-                        onSelect(pkg, mode, RuleCreationChoice.JUST_ONCE)
+                        onSelect(pkg, mode, RuleCreationChoice.JUST_ONCE, activeUrl)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -268,7 +298,7 @@ fun PickerBottomSheet(
                     OutlinedButton(
                         onClick = {
                             val pkg = selectedPackage ?: browsers.firstOrNull()?.packageName ?: return@OutlinedButton
-                            onSelect(pkg, mode, RuleCreationChoice.ALWAYS_THIS_SITE)
+                            onSelect(pkg, mode, RuleCreationChoice.ALWAYS_THIS_SITE, activeUrl)
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -282,7 +312,7 @@ fun PickerBottomSheet(
                         OutlinedButton(
                             onClick = {
                                 val pkg = selectedPackage ?: browsers.firstOrNull()?.packageName ?: return@OutlinedButton
-                                onSelect(pkg, mode, RuleCreationChoice.ALWAYS_THIS_APP)
+                                onSelect(pkg, mode, RuleCreationChoice.ALWAYS_THIS_APP, activeUrl)
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -298,11 +328,13 @@ fun PickerBottomSheet(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BrowserItem(
     browser: BrowserApp,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onLongPressPrivate: () -> Unit
 ) {
     val bitmap = remember(browser.icon) {
         browser.icon?.toBitmap()
@@ -316,7 +348,10 @@ fun BrowserItem(
                 if (isSelected) MaterialTheme.colorScheme.secondaryContainer
                 else Color.Transparent
             )
-            .clickable(onClick = onSelect)
+            .combinedClickable(
+                onClick = onSelect,
+                onLongClick = onLongPressPrivate
+            )
             .padding(8.dp)
             .width(72.dp)
             .semantics {
