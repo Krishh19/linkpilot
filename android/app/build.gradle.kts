@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -19,6 +20,10 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     buildTypes {
@@ -41,4 +46,9 @@ flutter {
 dependencies {
     implementation(project(":core"))
     implementation(project(":platform"))
+
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.androidx.activity.compose)
 }
