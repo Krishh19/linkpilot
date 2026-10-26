@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-26T00:00:00Z",
+  "globalTrackingParams": [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "utm_id",
+    "utm_source_platform",
+    "utm_creative_format",
+    "utm_marketing_tactic",
+    "fbclid",
+    "gclid",
+    "gclsrc",
+    "dclid",
+    "wbraid",
+    "gbraid",
+    "msclkid",
+    "igshid",
+    "mc_eid",
+    "mc_cid",
+    "_hsenc",
+    "_hsmi",
+    "mkt_tok",
+    "yclid",
+    "_openstat",
+    "s_kwcid",
+    "zenid",
+    "guccounter",
+    "ncid"
+  ],
+  "domainTrackingParams": {
+    "twitter.com": ["s", "t", "ref_src", "ref_url"],
+    "x.com": ["s", "t", "ref_src", "ref_url"],
+    "youtube.com": ["si", "feature", "pp"],
+    "youtu.be": ["si", "feature"],
+    "spotify.com": ["si", "context"],
+    "open.spotify.com": ["si", "context"],
+    "instagram.com": ["igsh", "utm_source"],
+    "tiktok.com": ["_r", "_t", "is_copy_url", "is_from_webapp", "sender_device"],
+    "amazon.com": ["tag", "ref_", "pf_rd_r", "pf_rd_m", "pf_rd_t", "pf_rd_i", "pf_rd_p", "pf_rd_s"],
+    "aliexpress.com": ["spm", "scm", "pvid", "algo_pvid", "algo_exp_id"],
+    "reddit.com": ["ref", "ref_source"]
+  },
+  "redirectWrappers": [
+    {
+      "domain": "l.facebook.com",
+      "param": "u"
+    },
+    {
+      "domain": "lm.facebook.com",
+      "param": "u"
+    },
+    {
+      "domain": "out.reddit.com",
+      "param": "url"
+    },
+    {
+      "domain": "www.google.com",
+      "path": "/url",
+      "param": "q"
+    },
+    {
+      "domain": "google.com",
+      "path": "/url",
+      "param": "q"
+    },
+    {
+      "domain": "slack-redir.net",
+      "path": "/link",
+      "param": "url"
+    }
+  ],
+  "safeExceptions": {
+    "youtube.com": ["t", "v", "list", "index"],
+    "youtu.be": ["t"]
+  }
+}

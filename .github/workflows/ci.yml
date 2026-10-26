@@ -1,0 +1,50 @@
+name: LinkPilot CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Flutter Analyze
+        run: flutter analyze
+
+      - name: Flutter Tests
+        run: flutter test
+
+      - name: Run Core Engine Tests
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :core:test --stacktrace
+
+      - name: Verify No Sensitive Permissions
+        run: |
+          if grep -E "android.permission.INTERNET|android.permission.QUERY_ALL_PACKAGES" android/app/src/main/AndroidManifest.xml; then
+            echo "Error: Prohibited permission found in AndroidManifest.xml!"
+            exit 1
+          fi
+          echo "Manifest permission check passed."
