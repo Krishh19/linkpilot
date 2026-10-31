@@ -5,4 +5,8 @@
     <string name="shortcut_open_copied_link_short">Open copied</string>
     <string name="shortcut_open_copied_link_long">Open copied link from clipboard</string>
     <string name="no_link_on_clipboard">No link found on clipboard</string>
+    <string name="unsupported_link">This link cannot be opened (unsupported or unsafe URL)</string>
+    <string name="launch_failed">Could not open the selected browser</string>
+    <string name="choose_app">Open link with</string>
+    <string name="no_browser_found">No app found to open this link</string>
 </resources>

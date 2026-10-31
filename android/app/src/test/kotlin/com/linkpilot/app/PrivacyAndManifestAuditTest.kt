@@ -37,6 +37,32 @@ class PrivacyAndManifestAuditTest {
     }
 
     @Test
+    fun testCustomTabsProviderServiceDeclared() {
+        val content = getManifestContent()
+        assertTrue(
+            "LinkPilot must advertise a Custom Tabs service so in-app Custom Tabs (e.g. Reddit) bind to it",
+            content.contains(".LinkPilotCustomTabsService")
+        )
+        assertTrue(
+            "Custom Tabs service must declare the system bind action",
+            content.contains("android.support.customtabs.action.CustomTabsService")
+        )
+    }
+
+    @Test
+    fun testRouterActivityHandlesBothWebSchemes() {
+        val content = getManifestContent()
+        assertTrue(
+            "RouterActivity must handle http links to qualify for ROLE_BROWSER",
+            content.contains("android:scheme=\"http\"")
+        )
+        assertTrue(
+            "RouterActivity must handle https links to qualify for ROLE_BROWSER",
+            content.contains("android:scheme=\"https\"")
+        )
+    }
+
+    @Test
     fun testRouterActivityTranslucentAndExported() {
         val content = getManifestContent()
         assertTrue(

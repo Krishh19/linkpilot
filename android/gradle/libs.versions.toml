@@ -7,6 +7,7 @@ compose-bom = "2025.01.00"
 androidx-core-ktx = "1.15.0"
 androidx-activity-compose = "1.10.0"
 androidx-lifecycle = "2.8.7"
+androidx-browser = "1.10.0"
 junit = "4.13.2"
 
 [libraries]
@@ -25,6 +26,7 @@ compose-material-icons-extended = { module = "androidx.compose.material:material
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "androidx-browser" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 

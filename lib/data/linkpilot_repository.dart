@@ -35,19 +35,30 @@ class LinkPilotRepository {
     return _api.getInstalledBrowsers();
   }
 
-  Future<bool> isDefaultBrowser() async {
-    return _api.isDefaultBrowser();
+  Future<BrowserSetupStatusPigeon> getBrowserSetupStatus() async {
+    return _api.getBrowserSetupStatus();
   }
 
   Future<bool> requestDefaultBrowserRole() async {
     return _api.requestDefaultBrowserRole();
   }
 
-  Future<RoutingResultPigeon> testRouteUrl(String url, {String? sourcePackage}) async {
+  Future<bool> openDefaultAppsSettings() async {
+    return _api.openDefaultAppsSettings();
+  }
+
+  Future<RoutingResultPigeon> testRouteUrl(
+    String url, {
+    String? sourcePackage,
+  }) async {
     return _api.testRouteUrl(url, sourcePackage);
   }
 
-  Future<bool> openInBrowser(String url, String packageName, {String mode = 'NORMAL'}) async {
+  Future<bool> openInBrowser(
+    String url,
+    String packageName, {
+    String mode = 'NORMAL',
+  }) async {
     return _api.openInBrowser(url, packageName, mode);
   }
 
@@ -67,7 +78,10 @@ class LinkPilotRepository {
     return _api.exportBackupJson();
   }
 
-  Future<BackupSummaryPigeon> importBackupJson(String json, {required bool merge}) async {
+  Future<BackupSummaryPigeon> importBackupJson(
+    String json, {
+    required bool merge,
+  }) async {
     return _api.importBackupJson(json, merge);
   }
 
@@ -77,5 +91,13 @@ class LinkPilotRepository {
 
   Future<bool> setProUnlocked(bool unlocked) async {
     return _api.setProUnlocked(unlocked);
+  }
+
+  Future<bool> isOnboardingCompleted() async {
+    return _api.isOnboardingCompleted();
+  }
+
+  Future<bool> setOnboardingCompleted(bool completed) async {
+    return _api.setOnboardingCompleted(completed);
   }
 }

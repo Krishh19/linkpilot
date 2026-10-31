@@ -1,13 +1,12 @@
 import 'package:pigeon/pigeon.dart';
 
-@ConfigurePigeon(PigeonOptions(
-  dartOut: 'lib/generated/linkpilot_api.g.dart',
-  kotlinOut: 'android/app/src/main/kotlin/com/linkpilot/app/pigeon/LinkPilotApi.g.kt',
-  kotlinOptions: KotlinOptions(
-    package: 'com.linkpilot.app.pigeon',
+@ConfigurePigeon(
+  PigeonOptions(
+    dartOut: 'lib/generated/linkpilot_api.g.dart',
+    kotlinOut: 'android/app/src/main/kotlin/com/linkpilot/app/pigeon/LinkPilotApi.g.kt',
+    kotlinOptions: KotlinOptions(package: 'com.linkpilot.app.pigeon'),
   ),
-))
-
+)
 class RulePigeon {
   RulePigeon({
     required this.id,
@@ -68,6 +67,26 @@ class BrowserPigeon {
   bool isDefault;
   int usageCount;
   String privateModeStatus; // "VERIFIED", "BEST_EFFORT", "UNSUPPORTED"
+}
+
+class BrowserSetupStatusPigeon {
+  BrowserSetupStatusPigeon({
+    required this.roleAvailable,
+    required this.roleHeld,
+    required this.qualifiesForBrowserRole,
+    this.currentHandlerPackage,
+    this.currentHandlerLabel,
+    required this.isLinkPilotHandler,
+    required this.customTabsReady,
+  });
+
+  bool roleAvailable;
+  bool roleHeld;
+  bool qualifiesForBrowserRole;
+  String? currentHandlerPackage;
+  String? currentHandlerLabel;
+  bool isLinkPilotHandler;
+  bool customTabsReady;
 }
 
 class RoutingResultPigeon {
@@ -131,8 +150,9 @@ abstract class LinkPilotHostApi {
   SettingsPigeon getSettings();
   bool saveSettings(SettingsPigeon settings);
   List<BrowserPigeon> getInstalledBrowsers();
-  bool isDefaultBrowser();
+  BrowserSetupStatusPigeon getBrowserSetupStatus();
   bool requestDefaultBrowserRole();
+  bool openDefaultAppsSettings();
   RoutingResultPigeon testRouteUrl(String url, String? sourcePackage);
   bool openInBrowser(String url, String packageName, String mode);
 
@@ -148,4 +168,8 @@ abstract class LinkPilotHostApi {
   // Pro & Free Tier (FR-J)
   bool isProUnlocked();
   bool setProUnlocked(bool unlocked);
+
+  // First-run setup
+  bool isOnboardingCompleted();
+  bool setOnboardingCompleted(bool completed);
 }

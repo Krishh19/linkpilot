@@ -35,3 +35,9 @@
 - **Context**: PRD FR-G2. Quick Settings tile and app launcher shortcut "Open copied link" must read clipboard only on explicit user tap. Background clipboard access violates Android 10+ privacy policies.
 - **Decision**: `LinkPilotTileService.onClick()` and `RouterActivity` with action `com.linkpilot.OPEN_COPIED_LINK` access `ClipboardManager` only synchronously upon user invocation. No background listeners or services exist.
 - **Consequences**: Compliance with modern Android privacy requirements, clean user UX for bypassing trapped in-app WebViews.
+
+## ADR-0007: Custom Tabs Provider for In-App Link Interception
+- **Status**: Accepted
+- **Context**: Many apps (Reddit, Gmail, news apps) open external links through Chrome Custom Tabs. When LinkPilot is the default browser but does not advertise `android.support.customtabs.action.CustomTabsService`, those apps skip LinkPilot and bind directly to Chrome, so links never reach `RouterActivity`.
+- **Decision**: `LinkPilotCustomTabsService` advertises the standard Custom Tabs bind action. It accepts the session handshake (`warmup`, `newSession`) but performs no rendering, no prefetch (`mayLaunchUrl` returns false), and no messaging. The app then launches the URL through `RouterActivity` as usual, where cleaning and rule routing happen in `:core`.
+- **Consequences**: In-app Custom Tabs are intercepted when LinkPilot holds `ROLE_BROWSER`. Pinned Custom Tabs and hard-coded WebViews remain non-interceptable by design (no Accessibility Service workaround). No new permissions are introduced and no network code is added.

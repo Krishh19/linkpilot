@@ -55,9 +55,44 @@ adb shell am start -a android.intent.action.VIEW \
 ```
 *Expected Result:* LinkPilot intercepts the intent, strips `utm_source`, and routes to chosen browser.
 
+### Testing Custom Tabs Interception (Reddit / Gmail)
+1. Set LinkPilot as the default browser (`Settings > Apps > Default apps > Browser app`).
+2. Verify the role holder:
+```bash
+adb shell cmd role get-role-holders android.app.role.BROWSER
+```
+*Expected Result:* `com.linkpilot.app`.
+3. Verify the Custom Tabs provider is discoverable:
+```bash
+adb shell cmd package query-services -a android.support.customtabs.action.CustomTabsService
+```
+*Expected Result:* an entry for `com.linkpilot.app/.LinkPilotCustomTabsService`.
+4. Open a link from Reddit (a post that links to an external site). The picker or the rule-configured browser must open, not Chrome's in-app tab.
+*Known limit:* pinned Custom Tabs (`CustomTabsIntent` with `setApplicationHandler` / `isEphemeralBrowsingEnabled`) and hard-coded WebViews never fire an `ACTION_VIEW` intent and cannot be intercepted.
+
 ---
 
-## 3. Graceful Fallback Strategy (FR-D4)
+## 3. Diagnosing "It Still Opens Chrome"
+
+LinkPilot only receives a tapped link when Android resolves that link to LinkPilot. The Home screen now reports the resolved handler and the role state; use it first.
+
+Verify the system resolver directly:
+
+```bash
+adb shell cmd package resolve-activity --brief \
+  -a android.intent.action.VIEW \
+  -c android.intent.category.BROWSABLE \
+  -d "https://example.com"
+```
+
+*Expected (LinkPilot holds ROLE_BROWSER):* `com.linkpilot.app/com.linkpilot.app.RouterActivity`
+*If it prints a Chrome component:* LinkPilot is not the OS default. Open LinkPilot → Home → **Set LinkPilot as Default**, or Android Settings → Apps → Default apps → Browser app → LinkPilot. Setting a fallback browser inside LinkPilot does not grant the OS role.
+
+If the resolver says LinkPilot but Reddit still opens Chrome, Reddit is bypassing the default browser (recent Reddit Android builds are known to pin Chrome or use a WebView). This cannot be intercepted without an Accessibility Service, which is forbidden by Rule 10. Use Reddit's Share → LinkPilot action instead. The Custom Tabs service in this app only helps when the calling app actually consults the default browser.
+
+---
+
+## 4. Graceful Fallback Strategy (FR-D4)
 
 When a rule or user requests `Mode.PRIVATE`:
 1. If the browser capability is `VERIFIED` or `BEST_EFFORT`, the appropriate extra is set on the explicit `ACTION_VIEW` intent.

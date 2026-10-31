@@ -3,13 +3,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:linkpilot/data/linkpilot_providers.dart';
 import 'package:linkpilot/data/linkpilot_repository.dart';
+import 'package:linkpilot/generated/linkpilot_api.g.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isDefaultAsync = ref.watch(defaultBrowserStatusProvider);
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(browserSetupStatusProvider);
+      ref.invalidate(installedBrowsersProvider);
+      // The native router writes rules/history/usage while this UI is backgrounded.
+      ref.invalidate(rulesProvider);
+      ref.invalidate(historyProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final setupAsync = ref.watch(browserSetupStatusProvider);
     final browsersAsync = ref.watch(installedBrowsersProvider);
     final rulesAsync = ref.watch(rulesProvider);
     final theme = Theme.of(context);
@@ -35,7 +65,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(defaultBrowserStatusProvider);
+          ref.invalidate(browserSetupStatusProvider);
           ref.invalidate(installedBrowsersProvider);
           ref.invalidate(rulesProvider);
         },
@@ -43,10 +73,10 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             // Default Browser Status Banner
-            isDefaultAsync.when(
-              data: (isDefault) => _buildStatusCard(context, ref, isDefault),
-              loading: () => const LinearProgressIndicator(),
-              error: (_, __) => _buildStatusCard(context, ref, false),
+            setupAsync.when(
+              data: (status) => _buildStatusCard(context, ref, status),
+              loading: () => _buildStatusCard(context, ref, null),
+              error: (_, __) => _buildStatusErrorCard(context, ref),
             ),
 
             const SizedBox(height: 16),
@@ -89,7 +119,8 @@ class HomeScreen extends ConsumerWidget {
                             Text(
                               'Test any link against the native Kotlin engine and see what gets cleaned.',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer.withAlpha(200),
+                                color: theme.colorScheme.onPrimaryContainer
+                                    .withAlpha(200),
                               ),
                             ),
                           ],
@@ -115,7 +146,8 @@ class HomeScreen extends ConsumerWidget {
                     context,
                     title: 'Rules',
                     subtitle: rulesAsync.when(
-                      data: (rules) => '${rules.where((r) => r.enabled).length} active',
+                      data: (rules) =>
+                          '${rules.where((r) => r.enabled).length} active',
                       loading: () => '...',
                       error: (_, __) => '0',
                     ),
@@ -197,9 +229,46 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, WidgetRef ref, bool isDefault) {
+  Widget _buildStatusCard(
+    BuildContext context,
+    WidgetRef ref,
+    BrowserSetupStatusPigeon? status,
+  ) {
     final theme = Theme.of(context);
-    final color = isDefault ? Colors.green : Colors.orange;
+
+    if (status == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Checking Android browser settings…',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final isReady = status.roleHeld && status.isLinkPilotHandler;
+    final handlerName =
+        status.currentHandlerLabel ??
+        status.currentHandlerPackage ??
+        'another app';
+    final color = isReady ? Colors.green : Colors.orange;
+    final title = isReady
+        ? 'LinkPilot is your Default Browser'
+        : status.roleHeld
+        ? 'Android is still sending links to $handlerName'
+        : "LinkPilot is not Android's Default Browser";
 
     return Card(
       child: Padding(
@@ -210,7 +279,7 @@ class HomeScreen extends ConsumerWidget {
             Row(
               children: [
                 Icon(
-                  isDefault ? Icons.check_circle : Icons.warning_amber_rounded,
+                  isReady ? Icons.check_circle : Icons.warning_amber_rounded,
                   color: color,
                   size: 28,
                 ),
@@ -220,15 +289,15 @@ class HomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isDefault ? 'LinkPilot is your Default Browser' : 'Default Browser Not Set',
+                        title,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        isDefault
-                            ? 'Every tapped link passes through LinkPilot instantly.'
-                            : 'Set LinkPilot as default to intercept and route links.',
+                        isReady
+                            ? 'Every tapped web link is routed through LinkPilot.'
+                            : 'Android sends tapped links to $handlerName. LinkPilot never sees them, so Reddit and other apps open it directly.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -238,17 +307,106 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            if (!isDefault) ...[
+            if (!isReady) ...[
               const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.open_in_browser,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Android currently opens web links in',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
+                            status.currentHandlerPackage == null
+                                ? handlerName
+                                : '$handlerName (${status.currentHandlerPackage})',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (!status.qualifiesForBrowserRole) ...[
+              const SizedBox(height: 8),
+              _buildDiagnosticRow(
+                context,
+                icon: Icons.error_outline,
+                color: Colors.red,
+                text: 'LinkPilot is not registered to handle web links in this build. Reinstall the app.',
+              ),
+            ],
+            if (status.roleHeld && !status.customTabsReady) ...[
+              const SizedBox(height: 8),
+              _buildDiagnosticRow(
+                context,
+                icon: Icons.extension_off,
+                color: Colors.orange,
+                text: 'Custom Tabs service not detected. Apps like Reddit may hand links to Chrome instead.',
+              ),
+            ],
+            if (!status.roleAvailable && !status.roleHeld) ...[
+              const SizedBox(height: 8),
+              Text(
+                'This Android version cannot show the default-browser dialog from inside the app. Open Settings → Apps → Default apps → Browser app and choose LinkPilot.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (!isReady) ...[
+              const SizedBox(height: 12),
+              if (!status.roleHeld) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => _requestDefaultBrowserRole(context, ref),
+                    child: const Text('Set LinkPilot as Default'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final repo = ref.read(linkPilotRepositoryProvider);
-                    await repo.requestDefaultBrowserRole();
-                    ref.invalidate(defaultBrowserStatusProvider);
-                  },
-                  child: const Text('Set as Default Browser'),
+                child: OutlinedButton(
+                  onPressed: () => _openDefaultAppsSettings(context, ref),
+                  child: const Text('Open Android Default Apps'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Android won't let you change it? Share the link from Reddit and pick LinkPilot.",
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ] else if (!status.customTabsReady) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Some apps that use Custom Tabs may still open Chrome. Share the link to LinkPilot instead.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -256,6 +414,92 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildStatusErrorCard(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: theme.colorScheme.error),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Could not read Android browser settings.',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(browserSetupStatusProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticRow(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String text,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _requestDefaultBrowserRole(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final launched = await ref
+        .read(linkPilotRepositoryProvider)
+        .requestDefaultBrowserRole();
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not open the default browser settings. Open Settings > Apps > Default apps.',
+          ),
+        ),
+      );
+    }
+    ref.invalidate(browserSetupStatusProvider);
+    ref.invalidate(installedBrowsersProvider);
+  }
+
+  Future<void> _openDefaultAppsSettings(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final opened = await ref
+        .read(linkPilotRepositoryProvider)
+        .openDefaultAppsSettings();
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not open Android settings. Open Settings > Apps > Default apps.',
+          ),
+        ),
+      );
+    }
+    ref.invalidate(browserSetupStatusProvider);
   }
 
   Widget _buildMetricCard(

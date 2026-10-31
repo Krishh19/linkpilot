@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
+import androidx.browser.customtabs.CustomTabsService
 import com.linkpilot.core.engine.LinkRouterEngine
 import com.linkpilot.core.model.Action
 import com.linkpilot.core.model.CleanerLevel
@@ -21,7 +22,7 @@ import com.linkpilot.platform.storage.StorageManager
 
 class LinkPilotHostApiImpl(
     private val context: Context,
-    private val storageManager: StorageManager = StorageManager(context),
+    private val storageManager: StorageManager = StorageManager.get(context),
     private val browserDiscovery: BrowserDiscovery = BrowserDiscovery(context),
     private val browserLauncher: BrowserLauncher = BrowserLauncher(context)
 ) : LinkPilotHostApi {
@@ -80,48 +81,89 @@ class LinkPilotHostApiImpl(
         }
     }
 
-    override fun isDefaultBrowser(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-            roleManager?.isRoleHeld(RoleManager.ROLE_BROWSER) == true
-        } else {
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
-            val defaultResolveInfo = context.packageManager.resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)
-            defaultResolveInfo?.activityInfo?.packageName == context.packageName
+    override fun getBrowserSetupStatus(): BrowserSetupStatusPigeon {
+        val pm = context.packageManager
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+        val resolved = pm.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)
+        val handlerPackage = resolved?.activityInfo?.packageName
+        val isLinkPilotHandler = handlerPackage == context.packageName
+        val handlerLabel = when {
+            handlerPackage == null -> null
+            handlerPackage == "android" -> "Android chooser"
+            isLinkPilotHandler -> "LinkPilot"
+            else -> try {
+                pm.getApplicationLabel(pm.getApplicationInfo(handlerPackage, 0)).toString()
+            } catch (_: Exception) {
+                handlerPackage
+            }
         }
+
+        val roleManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+        } else {
+            null
+        }
+
+        val qualifiesForRole = pm.queryIntentActivities(
+            Intent(probe).setPackage(context.packageName),
+            PackageManager.MATCH_DEFAULT_ONLY
+        ).isNotEmpty()
+        val customTabsReady = pm.queryIntentServices(
+            Intent(CustomTabsService.ACTION_CUSTOM_TABS_CONNECTION).setPackage(context.packageName),
+            0
+        ).isNotEmpty()
+
+        return BrowserSetupStatusPigeon(
+            roleAvailable = roleManager?.isRoleAvailable(RoleManager.ROLE_BROWSER) == true,
+            roleHeld = if (roleManager != null) {
+                roleManager.isRoleHeld(RoleManager.ROLE_BROWSER)
+            } else {
+                isLinkPilotHandler
+            },
+            qualifiesForBrowserRole = qualifiesForRole,
+            currentHandlerPackage = handlerPackage,
+            currentHandlerLabel = handlerLabel,
+            isLinkPilotHandler = isLinkPilotHandler,
+            customTabsReady = customTabsReady
+        )
     }
 
     override fun requestDefaultBrowserRole(): Boolean {
-        return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
-                if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_BROWSER)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? RoleManager
+            if (roleManager != null && roleManager.isRoleHeld(RoleManager.ROLE_BROWSER)) {
+                return true
+            }
+            if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_BROWSER)) {
+                try {
                     val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_BROWSER).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(intent)
-                    true
-                } else {
-                    openDefaultAppsSettings()
+                    return true
+                } catch (_: Exception) {
+                    // Fall through to the default-apps settings screen.
                 }
-            } else {
-                openDefaultAppsSettings()
             }
-        } catch (_: Exception) {
-            false
         }
+        return openDefaultAppsSettings()
     }
 
-    private fun openDefaultAppsSettings(): Boolean {
-        return try {
-            val intent = Intent(AndroidSettings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    override fun openDefaultAppsSettings(): Boolean {
+        val candidates = listOf(
+            Intent(AndroidSettings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+            Intent(AndroidSettings.ACTION_SETTINGS)
+        )
+        for (intent in candidates) {
+            try {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (_: Exception) {
+                // Try the next settings entry point.
             }
-            context.startActivity(intent)
-            true
-        } catch (_: Exception) {
-            false
         }
+        return false
     }
 
     override fun testRouteUrl(url: String, sourcePackage: String?): RoutingResultPigeon {
@@ -229,6 +271,14 @@ class LinkPilotHostApiImpl(
 
     override fun setProUnlocked(unlocked: Boolean): Boolean {
         return storageManager.setProUnlocked(unlocked)
+    }
+
+    override fun isOnboardingCompleted(): Boolean {
+        return storageManager.isOnboardingCompleted()
+    }
+
+    override fun setOnboardingCompleted(completed: Boolean): Boolean {
+        return storageManager.setOnboardingCompleted(completed)
     }
 
     private fun toPigeon(rule: Rule): RulePigeon {

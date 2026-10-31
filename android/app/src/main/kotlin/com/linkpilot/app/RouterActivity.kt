@@ -1,25 +1,26 @@
 package com.linkpilot.app
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import com.linkpilot.core.cleaner.ParsedUrl
 import com.linkpilot.core.engine.LinkRouterEngine
 import com.linkpilot.core.model.Action
 import com.linkpilot.core.model.Decision
-import com.linkpilot.core.model.Match
 import com.linkpilot.core.model.Mode
-import com.linkpilot.core.model.Rule
+import com.linkpilot.core.model.PickerReason
+import com.linkpilot.core.rules.RuleDrafts
 import com.linkpilot.platform.browser.BrowserDiscovery
 import com.linkpilot.platform.browser.BrowserLauncher
 import com.linkpilot.platform.picker.PickerBottomSheet
 import com.linkpilot.platform.picker.RuleCreationChoice
 import com.linkpilot.platform.storage.StorageManager
-import java.util.UUID
 
 class RouterActivity : ComponentActivity() {
 
@@ -31,7 +32,7 @@ class RouterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        storageManager = StorageManager(applicationContext)
+        storageManager = StorageManager.get(applicationContext)
         browserDiscovery = BrowserDiscovery(applicationContext)
         browserLauncher = BrowserLauncher(applicationContext)
         engine = LinkRouterEngine.create(storageManager.getCleanerConfig())
@@ -68,7 +69,14 @@ class RouterActivity : ComponentActivity() {
             settings = settings
         )
 
-        when (val decision = routingResult.decision) {
+        val decision = routingResult.decision
+        if (decision is Decision.ShowPicker && decision.reason == PickerReason.REJECTED_INPUT) {
+            Toast.makeText(this, R.string.unsupported_link, Toast.LENGTH_SHORT).show()
+            finishQuietly()
+            return
+        }
+
+        when (decision) {
             is Decision.Launch -> {
                 val action = decision.action
                 val targetPkg = when (action) {
@@ -97,7 +105,7 @@ class RouterActivity : ComponentActivity() {
                     originalUrl = routingResult.originalUrl,
                     removedParams = routingResult.removedParams,
                     sourcePackage = sourcePackage,
-                    launchError = "Could not open with the chosen app. Please pick a browser."
+                    launchError = getString(R.string.launch_failed)
                 )
             }
 
@@ -124,8 +132,8 @@ class RouterActivity : ComponentActivity() {
         val browsers = browserDiscovery.getInstalledBrowsers(usageCounters)
 
         if (browsers.isEmpty()) {
-            // No browsers found, cannot route
-            finish()
+            openSystemChooser(cleanedUrl)
+            finishQuietly()
             return
         }
 
@@ -168,16 +176,13 @@ class RouterActivity : ComponentActivity() {
             }
 
             RuleCreationChoice.ALWAYS_THIS_SITE -> {
-                val parsed = ParsedUrl.parse(urlToOpen)
+                val parsed = com.linkpilot.core.cleaner.ParsedUrl.parse(urlToOpen)
                 if (parsed != null) {
-                    val domainPattern = "*.${parsed.asciiHost}"
-                    val newRule = Rule(
-                        id = UUID.randomUUID().toString(),
-                        name = "Always for ${parsed.rawHost}",
-                        priority = 10,
-                        match = Match(domains = listOf(domainPattern)),
-                        action = Action.OpenInBrowser(selectedPkg, mode),
-                        enabled = true
+                    val newRule = RuleDrafts.forSite(
+                        host = parsed.asciiHost,
+                        displayHost = parsed.rawHost,
+                        targetPackage = selectedPkg,
+                        mode = mode
                     )
                     val updated = storageManager.getRules() + newRule
                     storageManager.saveRules(updated)
@@ -186,13 +191,10 @@ class RouterActivity : ComponentActivity() {
 
             RuleCreationChoice.ALWAYS_THIS_APP -> {
                 if (!sourcePackage.isNullOrBlank()) {
-                    val newRule = Rule(
-                        id = UUID.randomUUID().toString(),
-                        name = "Always from $sourcePackage",
-                        priority = 5,
-                        match = Match(sourcePackages = listOf(sourcePackage)),
-                        action = Action.OpenInBrowser(selectedPkg, mode),
-                        enabled = true
+                    val newRule = RuleDrafts.forSourceApp(
+                        sourcePackage = sourcePackage,
+                        targetPackage = selectedPkg,
+                        mode = mode
                     )
                     val updated = storageManager.getRules() + newRule
                     storageManager.saveRules(updated)
@@ -200,9 +202,13 @@ class RouterActivity : ComponentActivity() {
             }
         }
 
-        browserLauncher.launch(urlToOpen, selectedPkg, mode)
-        storageManager.incrementUsage(selectedPkg)
-        storageManager.addHistoryItem(urlToOpen, selectedPkg)
+        val launched = browserLauncher.launch(urlToOpen, selectedPkg, mode)
+        if (launched) {
+            storageManager.incrementUsage(selectedPkg)
+            storageManager.addHistoryItem(urlToOpen, selectedPkg)
+        } else {
+            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_LONG).show()
+        }
         finishQuietly()
     }
 
@@ -239,11 +245,39 @@ class RouterActivity : ComponentActivity() {
     }
 
     private fun extractSourcePackage(): String? {
-        val referrerUri: Uri? = referrer
-        if (referrerUri != null && referrerUri.scheme == "android-app") {
-            return referrerUri.authority ?: referrerUri.host
+        val referrerPackage = referrer
+            ?.takeIf { it.scheme == "android-app" }
+            ?.let { it.authority ?: it.host }
+
+        val launchedFrom = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            launchedFromPackage
+        } else {
+            null
         }
-        return callingPackage
+
+        // getLaunchedFromPackage is most reliable, but the resolver chooser reports "android".
+        // Referrer and callingPackage are fallbacks, and all of them can be null.
+        return sequenceOf(launchedFrom, referrerPackage, callingPackage)
+            .filterNotNull()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() && it != packageName && it != "android" }
+    }
+
+    private fun openSystemChooser(url: String) {
+        try {
+            val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+            val chooser = Intent.createChooser(viewIntent, getString(R.string.choose_app)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(
+                    Intent.EXTRA_EXCLUDE_COMPONENTS,
+                    arrayOf(ComponentName(this@RouterActivity, RouterActivity::class.java))
+                )
+            }
+            startActivity(chooser)
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.no_browser_found, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun finishQuietly() {

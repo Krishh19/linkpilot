@@ -2,12 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:linkpilot/data/linkpilot_repository.dart';
 import 'package:linkpilot/generated/linkpilot_api.g.dart';
 
-final defaultBrowserStatusProvider = FutureProvider.autoDispose<bool>((ref) async {
-  final repo = ref.watch(linkPilotRepositoryProvider);
-  return repo.isDefaultBrowser();
-});
+final browserSetupStatusProvider =
+    FutureProvider.autoDispose<BrowserSetupStatusPigeon>((ref) async {
+      final repo = ref.watch(linkPilotRepositoryProvider);
+      return repo.getBrowserSetupStatus();
+    });
 
-final installedBrowsersProvider = FutureProvider<List<BrowserPigeon>>((ref) async {
+final installedBrowsersProvider = FutureProvider<List<BrowserPigeon>>((
+  ref,
+) async {
   final repo = ref.watch(linkPilotRepositoryProvider);
   return repo.getInstalledBrowsers();
 });
@@ -60,7 +63,9 @@ class RulesNotifier extends AsyncNotifier<List<RulePigeon>> {
   }
 }
 
-final rulesProvider = AsyncNotifierProvider<RulesNotifier, List<RulePigeon>>(RulesNotifier.new);
+final rulesProvider = AsyncNotifierProvider<RulesNotifier, List<RulePigeon>>(
+  RulesNotifier.new,
+);
 
 class SettingsNotifier extends AsyncNotifier<SettingsPigeon> {
   @override
@@ -91,7 +96,10 @@ class SettingsNotifier extends AsyncNotifier<SettingsPigeon> {
   }
 }
 
-final settingsProvider = AsyncNotifierProvider<SettingsNotifier, SettingsPigeon>(SettingsNotifier.new);
+final settingsProvider =
+    AsyncNotifierProvider<SettingsNotifier, SettingsPigeon>(
+      SettingsNotifier.new,
+    );
 
 class HistoryNotifier extends AsyncNotifier<List<HistoryItemPigeon>> {
   @override
@@ -119,7 +127,10 @@ class HistoryNotifier extends AsyncNotifier<List<HistoryItemPigeon>> {
   }
 }
 
-final historyProvider = AsyncNotifierProvider<HistoryNotifier, List<HistoryItemPigeon>>(HistoryNotifier.new);
+final historyProvider =
+    AsyncNotifierProvider<HistoryNotifier, List<HistoryItemPigeon>>(
+      HistoryNotifier.new,
+    );
 
 class ProStatusNotifier extends AsyncNotifier<bool> {
   @override
@@ -136,4 +147,6 @@ class ProStatusNotifier extends AsyncNotifier<bool> {
   }
 }
 
-final proStatusProvider = AsyncNotifierProvider<ProStatusNotifier, bool>(ProStatusNotifier.new);
+final proStatusProvider = AsyncNotifierProvider<ProStatusNotifier, bool>(
+  ProStatusNotifier.new,
+);

@@ -327,6 +327,81 @@ class BrowserPigeon {
   }
 }
 
+class BrowserSetupStatusPigeon {
+  BrowserSetupStatusPigeon({
+    required this.roleAvailable,
+    required this.roleHeld,
+    required this.qualifiesForBrowserRole,
+    this.currentHandlerPackage,
+    this.currentHandlerLabel,
+    required this.isLinkPilotHandler,
+    required this.customTabsReady,
+  });
+
+  bool roleAvailable;
+
+  bool roleHeld;
+
+  bool qualifiesForBrowserRole;
+
+  String? currentHandlerPackage;
+
+  String? currentHandlerLabel;
+
+  bool isLinkPilotHandler;
+
+  bool customTabsReady;
+
+  List<Object?> _toList() {
+    return <Object?>[
+      roleAvailable,
+      roleHeld,
+      qualifiesForBrowserRole,
+      currentHandlerPackage,
+      currentHandlerLabel,
+      isLinkPilotHandler,
+      customTabsReady,
+    ];
+  }
+
+  Object encode() {
+    return _toList();  }
+
+  static BrowserSetupStatusPigeon decode(Object result) {
+    result as List<Object?>;
+    return BrowserSetupStatusPigeon(
+      roleAvailable: result[0]! as bool,
+      roleHeld: result[1]! as bool,
+      qualifiesForBrowserRole: result[2]! as bool,
+      currentHandlerPackage: result[3] as String?,
+      currentHandlerLabel: result[4] as String?,
+      isLinkPilotHandler: result[5]! as bool,
+      customTabsReady: result[6]! as bool,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! BrowserSetupStatusPigeon || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(roleAvailable, other.roleAvailable) && _deepEquals(roleHeld, other.roleHeld) && _deepEquals(qualifiesForBrowserRole, other.qualifiesForBrowserRole) && _deepEquals(currentHandlerPackage, other.currentHandlerPackage) && _deepEquals(currentHandlerLabel, other.currentHandlerLabel) && _deepEquals(isLinkPilotHandler, other.isLinkPilotHandler) && _deepEquals(customTabsReady, other.customTabsReady);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'BrowserSetupStatusPigeon(roleAvailable: $roleAvailable, roleHeld: $roleHeld, qualifiesForBrowserRole: $qualifiesForBrowserRole, currentHandlerPackage: $currentHandlerPackage, currentHandlerLabel: $currentHandlerLabel, isLinkPilotHandler: $isLinkPilotHandler, customTabsReady: $customTabsReady)';
+  }
+}
+
 class RoutingResultPigeon {
   RoutingResultPigeon({
     required this.cleanedUrl,
@@ -554,14 +629,17 @@ class _PigeonCodec extends StandardMessageCodec {
     }    else if (value is BrowserPigeon) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is RoutingResultPigeon) {
+    }    else if (value is BrowserSetupStatusPigeon) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is HistoryItemPigeon) {
+    }    else if (value is RoutingResultPigeon) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    }    else if (value is BackupSummaryPigeon) {
+    }    else if (value is HistoryItemPigeon) {
       buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    }    else if (value is BackupSummaryPigeon) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -578,10 +656,12 @@ class _PigeonCodec extends StandardMessageCodec {
       case 131:
         return BrowserPigeon.decode(readValue(buffer)!);
       case 132:
-        return RoutingResultPigeon.decode(readValue(buffer)!);
+        return BrowserSetupStatusPigeon.decode(readValue(buffer)!);
       case 133:
-        return HistoryItemPigeon.decode(readValue(buffer)!);
+        return RoutingResultPigeon.decode(readValue(buffer)!);
       case 134:
+        return HistoryItemPigeon.decode(readValue(buffer)!);
+      case 135:
         return BackupSummaryPigeon.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -701,8 +781,27 @@ class LinkPilotHostApi {
     return (pigeonVar_replyValue! as List<Object?>).cast<BrowserPigeon>();
   }
 
-  Future<bool> isDefaultBrowser() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isDefaultBrowser$pigeonVar_messageChannelSuffix';
+  Future<BrowserSetupStatusPigeon> getBrowserSetupStatus() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.getBrowserSetupStatus$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as BrowserSetupStatusPigeon;
+  }
+
+  Future<bool> requestDefaultBrowserRole() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.requestDefaultBrowserRole$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -720,8 +819,8 @@ class LinkPilotHostApi {
     return pigeonVar_replyValue! as bool;
   }
 
-  Future<bool> requestDefaultBrowserRole() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.requestDefaultBrowserRole$pigeonVar_messageChannelSuffix';
+  Future<bool> openDefaultAppsSettings() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.openDefaultAppsSettings$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -899,6 +998,44 @@ class LinkPilotHostApi {
       binaryMessenger: pigeonVar_binaryMessenger,
     );
     final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[unlocked]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<bool> isOnboardingCompleted() async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isOnboardingCompleted$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+        pigeonVar_replyList,
+        pigeonVar_channelName,
+        isNullValid: false,
+    )
+    ;
+    return pigeonVar_replyValue! as bool;
+  }
+
+  Future<bool> setOnboardingCompleted(bool completed) async {
+    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setOnboardingCompleted$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[completed]);
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(

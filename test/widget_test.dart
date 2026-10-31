@@ -19,6 +19,7 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
     schemaVersion: 1,
   );
   bool defaultBrowser = false;
+  bool customTabsReady = true;
 
   @override
   Future<List<RulePigeon>> getRules() async => rules;
@@ -60,7 +61,19 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
   }
 
   @override
-  Future<bool> isDefaultBrowser() async => defaultBrowser;
+  Future<BrowserSetupStatusPigeon> getBrowserSetupStatus() async {
+    return BrowserSetupStatusPigeon(
+      roleAvailable: true,
+      roleHeld: defaultBrowser,
+      qualifiesForBrowserRole: true,
+      currentHandlerPackage: defaultBrowser
+          ? 'com.linkpilot.app'
+          : 'com.android.chrome',
+      currentHandlerLabel: defaultBrowser ? 'LinkPilot' : 'Chrome',
+      isLinkPilotHandler: defaultBrowser,
+      customTabsReady: customTabsReady,
+    );
+  }
 
   @override
   Future<bool> requestDefaultBrowserRole() async {
@@ -69,7 +82,13 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
   }
 
   @override
-  Future<RoutingResultPigeon> testRouteUrl(String url, {String? sourcePackage}) async {
+  Future<bool> openDefaultAppsSettings() async => true;
+
+  @override
+  Future<RoutingResultPigeon> testRouteUrl(
+    String url, {
+    String? sourcePackage,
+  }) async {
     return RoutingResultPigeon(
       cleanedUrl: 'https://example.com/clean',
       originalUrl: url,
@@ -87,7 +106,11 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
   bool proUnlocked = false;
 
   @override
-  Future<bool> openInBrowser(String url, String packageName, {String mode = 'NORMAL'}) async => true;
+  Future<bool> openInBrowser(
+    String url,
+    String packageName, {
+    String mode = 'NORMAL',
+  }) async => true;
 
   @override
   Future<List<HistoryItemPigeon>> getHistory() async => history;
@@ -108,7 +131,10 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
   Future<String> exportBackupJson() async => '{"schemaVersion":1,"rules":[]}';
 
   @override
-  Future<BackupSummaryPigeon> importBackupJson(String json, {required bool merge}) async {
+  Future<BackupSummaryPigeon> importBackupJson(
+    String json, {
+    required bool merge,
+  }) async {
     return BackupSummaryPigeon(ruleCount: 0, schemaVersion: 1, success: true);
   }
 
@@ -120,17 +146,28 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
     proUnlocked = unlocked;
     return true;
   }
+
+  bool onboardingCompleted = true;
+
+  @override
+  Future<bool> isOnboardingCompleted() async => onboardingCompleted;
+
+  @override
+  Future<bool> setOnboardingCompleted(bool completed) async {
+    onboardingCompleted = completed;
+    return true;
+  }
 }
 
 void main() {
-  testWidgets('LinkPilotApp smoke test loads HomeScreen', (WidgetTester tester) async {
+  testWidgets('LinkPilotApp smoke test loads HomeScreen', (
+    WidgetTester tester,
+  ) async {
     final fakeRepo = FakeLinkPilotRepository();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
         child: const LinkPilotApp(),
       ),
     );
@@ -142,12 +179,111 @@ void main() {
     expect(find.text('Browsers'), findsOneWidget);
   });
 
-  testWidgets('HelpScreen renders in-app browser guides and honesty policy', (WidgetTester tester) async {
+  testWidgets('Onboarding skip persists completion and opens Home', (
+    WidgetTester tester,
+  ) async {
+    final fakeRepo = FakeLinkPilotRepository()..onboardingCompleted = false;
+
     await tester.pumpWidget(
-      const MaterialApp(
-        home: HelpScreen(),
+      ProviderScope(
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const LinkPilotApp(initialLocation: '/onboarding'),
       ),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Setup LinkPilot'), findsOneWidget);
+
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+
+    expect(fakeRepo.onboardingCompleted, isTrue);
+    expect(
+      find.text("LinkPilot is not Android's Default Browser"),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'Onboarding shows the current handler and grants the browser role',
+    (WidgetTester tester) async {
+      final fakeRepo = FakeLinkPilotRepository()..onboardingCompleted = false;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+          child: const LinkPilotApp(initialLocation: '/onboarding'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Set as Default Browser'), findsOneWidget);
+      expect(find.text('Android currently opens web links in'), findsOneWidget);
+      expect(find.text('Chrome (com.android.chrome)'), findsOneWidget);
+
+      final setDefault = find.text('Set LinkPilot as Default');
+      await tester.ensureVisible(setDefault);
+      await tester.tap(setDefault);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepo.defaultBrowser, isTrue);
+      expect(find.text('Default Browser Set!'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Home names the app Android currently uses for web links', (
+    WidgetTester tester,
+  ) async {
+    final fakeRepo = FakeLinkPilotRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const LinkPilotApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("LinkPilot is not Android's Default Browser"),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Android currently opens web links in'),
+      findsOneWidget,
+    );
+    expect(find.text('Chrome (com.android.chrome)'), findsOneWidget);
+    expect(find.text('Set LinkPilot as Default'), findsOneWidget);
+  });
+
+  testWidgets('Home confirms setup when LinkPilot is the default browser', (
+    WidgetTester tester,
+  ) async {
+    final fakeRepo = FakeLinkPilotRepository()..defaultBrowser = true;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const LinkPilotApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('LinkPilot is your Default Browser'), findsOneWidget);
+    expect(
+      find.text('Every tapped web link is routed through LinkPilot.'),
+      findsOneWidget,
+    );
+    expect(find.text('Set LinkPilot as Default'), findsNothing);
+  });
+
+  testWidgets('HelpScreen renders in-app browser guides and honesty policy', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: HelpScreen()));
     await tester.pumpAndSettle();
 
     expect(find.text('Help & App Guides'), findsOneWidget);
@@ -158,17 +294,15 @@ void main() {
     expect(find.text('Facebook'), findsOneWidget);
   });
 
-  testWidgets('TestUrlScreen performs route evaluation', (WidgetTester tester) async {
+  testWidgets('TestUrlScreen performs route evaluation', (
+    WidgetTester tester,
+  ) async {
     final fakeRepo = FakeLinkPilotRepository();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-        child: const MaterialApp(
-          home: TestUrlScreen(),
-        ),
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const MaterialApp(home: TestUrlScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -184,17 +318,15 @@ void main() {
     expect(find.text('Test Rule'), findsOneWidget);
   });
 
-  testWidgets('HistoryScreen renders disabled state and enables history', (WidgetTester tester) async {
+  testWidgets('HistoryScreen renders disabled state and enables history', (
+    WidgetTester tester,
+  ) async {
     final fakeRepo = FakeLinkPilotRepository();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-        child: const MaterialApp(
-          home: HistoryScreen(),
-        ),
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const MaterialApp(home: HistoryScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -210,17 +342,15 @@ void main() {
     expect(find.text('No routed links in history yet.'), findsOneWidget);
   });
 
-  testWidgets('BackupScreen renders export and import cards', (WidgetTester tester) async {
+  testWidgets('BackupScreen renders export and import cards', (
+    WidgetTester tester,
+  ) async {
     final fakeRepo = FakeLinkPilotRepository();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-        child: const MaterialApp(
-          home: BackupScreen(),
-        ),
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const MaterialApp(home: BackupScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -232,17 +362,15 @@ void main() {
     expect(find.text('Replace All'), findsOneWidget);
   });
 
-  testWidgets('ProScreen renders features and handles unlock', (WidgetTester tester) async {
+  testWidgets('ProScreen renders features and handles unlock', (
+    WidgetTester tester,
+  ) async {
     final fakeRepo = FakeLinkPilotRepository();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          linkPilotRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-        child: const MaterialApp(
-          home: ProScreen(),
-        ),
+        overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
+        child: const MaterialApp(home: ProScreen()),
       ),
     );
     await tester.pumpAndSettle();

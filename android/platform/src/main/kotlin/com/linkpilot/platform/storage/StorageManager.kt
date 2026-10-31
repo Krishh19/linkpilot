@@ -28,7 +28,20 @@ data class BackupPayload(
     val usageCounters: Map<String, Int>
 )
 
-class StorageManager(private val context: Context) {
+class StorageManager private constructor(context: Context) {
+
+    companion object {
+        @Volatile
+        private var instance: StorageManager? = null
+
+        fun get(context: Context): StorageManager {
+            return instance ?: synchronized(this) {
+                instance ?: StorageManager(context.applicationContext).also { instance = it }
+            }
+        }
+    }
+
+    private val context: Context = context.applicationContext
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -41,6 +54,7 @@ class StorageManager(private val context: Context) {
     private val usageCountersFile = File(context.filesDir, "usage_counters.json")
     private val historyFile = File(context.filesDir, "history.json")
     private val proPrefs = context.getSharedPreferences("linkpilot_pro", Context.MODE_PRIVATE)
+    private val appPrefs = context.getSharedPreferences("linkpilot_app", Context.MODE_PRIVATE)
 
     // In-memory atomic cached snapshots for instant read
     private val cachedRules = AtomicReference<List<Rule>>(null)
@@ -107,14 +121,19 @@ class StorageManager(private val context: Context) {
         val cached = cachedCleanerConfig.get()
         if (cached != null) return cached
 
-        val loaded = try {
-            context.assets.open("cleaner_rules.json").use { stream ->
-                val text = stream.bufferedReader().readText()
-                json.decodeFromString<CleanerConfig>(text)
+        val assetPaths = listOf(
+            "flutter_assets/assets/cleaner_rules.json",
+            "cleaner_rules.json"
+        )
+        val loaded = assetPaths.firstNotNullOfOrNull { path ->
+            try {
+                context.assets.open(path).use { stream ->
+                    json.decodeFromString<CleanerConfig>(stream.bufferedReader().readText())
+                }
+            } catch (_: Exception) {
+                null
             }
-        } catch (_: Exception) {
-            CleanerConfig()
-        }
+        } ?: CleanerConfig()
         cachedCleanerConfig.set(loaded)
         return loaded
     }
@@ -224,6 +243,17 @@ class StorageManager(private val context: Context) {
 
     fun setProUnlocked(unlocked: Boolean): Boolean {
         proPrefs.edit().putBoolean("pro_unlocked", unlocked).apply()
+        return true
+    }
+
+    // --- First-run setup ---
+
+    fun isOnboardingCompleted(): Boolean {
+        return appPrefs.getBoolean("onboarding_completed", false)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean): Boolean {
+        appPrefs.edit().putBoolean("onboarding_completed", completed).apply()
         return true
     }
 

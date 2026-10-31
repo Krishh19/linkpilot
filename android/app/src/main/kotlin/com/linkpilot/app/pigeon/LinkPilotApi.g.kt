@@ -380,6 +380,67 @@ data class BrowserPigeon (
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
+data class BrowserSetupStatusPigeon (
+  val roleAvailable: Boolean,
+  val roleHeld: Boolean,
+  val qualifiesForBrowserRole: Boolean,
+  val currentHandlerPackage: String? = null,
+  val currentHandlerLabel: String? = null,
+  val isLinkPilotHandler: Boolean,
+  val customTabsReady: Boolean
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): BrowserSetupStatusPigeon {
+      val roleAvailable = pigeonVar_list[0] as Boolean
+      val roleHeld = pigeonVar_list[1] as Boolean
+      val qualifiesForBrowserRole = pigeonVar_list[2] as Boolean
+      val currentHandlerPackage = pigeonVar_list[3] as String?
+      val currentHandlerLabel = pigeonVar_list[4] as String?
+      val isLinkPilotHandler = pigeonVar_list[5] as Boolean
+      val customTabsReady = pigeonVar_list[6] as Boolean
+      return BrowserSetupStatusPigeon(roleAvailable, roleHeld, qualifiesForBrowserRole, currentHandlerPackage, currentHandlerLabel, isLinkPilotHandler, customTabsReady)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      roleAvailable,
+      roleHeld,
+      qualifiesForBrowserRole,
+      currentHandlerPackage,
+      currentHandlerLabel,
+      isLinkPilotHandler,
+      customTabsReady,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as BrowserSetupStatusPigeon
+    return LinkPilotApiPigeonUtils.deepEquals(this.roleAvailable, other.roleAvailable) && LinkPilotApiPigeonUtils.deepEquals(this.roleHeld, other.roleHeld) && LinkPilotApiPigeonUtils.deepEquals(this.qualifiesForBrowserRole, other.qualifiesForBrowserRole) && LinkPilotApiPigeonUtils.deepEquals(this.currentHandlerPackage, other.currentHandlerPackage) && LinkPilotApiPigeonUtils.deepEquals(this.currentHandlerLabel, other.currentHandlerLabel) && LinkPilotApiPigeonUtils.deepEquals(this.isLinkPilotHandler, other.isLinkPilotHandler) && LinkPilotApiPigeonUtils.deepEquals(this.customTabsReady, other.customTabsReady)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.roleAvailable)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.roleHeld)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.qualifiesForBrowserRole)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.currentHandlerPackage)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.currentHandlerLabel)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.isLinkPilotHandler)
+    result = 31 * result + LinkPilotApiPigeonUtils.deepHash(this.customTabsReady)
+    return result
+  }
+  override fun toString(): String {
+    return "BrowserSetupStatusPigeon(roleAvailable=$roleAvailable, roleHeld=$roleHeld, qualifiesForBrowserRole=$qualifiesForBrowserRole, currentHandlerPackage=$currentHandlerPackage, currentHandlerLabel=$currentHandlerLabel, isLinkPilotHandler=$isLinkPilotHandler, customTabsReady=$customTabsReady)"
+  }
+}
+
+/** Generated class from Pigeon that represents data sent in messages. */
 data class RoutingResultPigeon (
   val cleanedUrl: String,
   val originalUrl: String,
@@ -569,15 +630,20 @@ private open class LinkPilotApiPigeonCodec : StandardMessageCodec() {
       }
       132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          RoutingResultPigeon.fromList(it)
+          BrowserSetupStatusPigeon.fromList(it)
         }
       }
       133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
-          HistoryItemPigeon.fromList(it)
+          RoutingResultPigeon.fromList(it)
         }
       }
       134.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          HistoryItemPigeon.fromList(it)
+        }
+      }
+      135.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           BackupSummaryPigeon.fromList(it)
         }
@@ -599,16 +665,20 @@ private open class LinkPilotApiPigeonCodec : StandardMessageCodec() {
         stream.write(131)
         writeValue(stream, value.toList())
       }
-      is RoutingResultPigeon -> {
+      is BrowserSetupStatusPigeon -> {
         stream.write(132)
         writeValue(stream, value.toList())
       }
-      is HistoryItemPigeon -> {
+      is RoutingResultPigeon -> {
         stream.write(133)
         writeValue(stream, value.toList())
       }
-      is BackupSummaryPigeon -> {
+      is HistoryItemPigeon -> {
         stream.write(134)
+        writeValue(stream, value.toList())
+      }
+      is BackupSummaryPigeon -> {
+        stream.write(135)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -623,8 +693,9 @@ interface LinkPilotHostApi {
   fun getSettings(): SettingsPigeon
   fun saveSettings(settings: SettingsPigeon): Boolean
   fun getInstalledBrowsers(): List<BrowserPigeon>
-  fun isDefaultBrowser(): Boolean
+  fun getBrowserSetupStatus(): BrowserSetupStatusPigeon
   fun requestDefaultBrowserRole(): Boolean
+  fun openDefaultAppsSettings(): Boolean
   fun testRouteUrl(url: String, sourcePackage: String?): RoutingResultPigeon
   fun openInBrowser(url: String, packageName: String, mode: String): Boolean
   fun getHistory(): List<HistoryItemPigeon>
@@ -634,6 +705,8 @@ interface LinkPilotHostApi {
   fun importBackupJson(json: String, merge: Boolean): BackupSummaryPigeon
   fun isProUnlocked(): Boolean
   fun setProUnlocked(unlocked: Boolean): Boolean
+  fun isOnboardingCompleted(): Boolean
+  fun setOnboardingCompleted(completed: Boolean): Boolean
 
   companion object {
     /** The codec used by LinkPilotHostApi. */
@@ -724,11 +797,11 @@ interface LinkPilotHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isDefaultBrowser$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.getBrowserSetupStatus$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
-              listOf(api.isDefaultBrowser())
+              listOf(api.getBrowserSetupStatus())
             } catch (exception: Throwable) {
               LinkPilotApiPigeonUtils.wrapError(exception)
             }
@@ -744,6 +817,21 @@ interface LinkPilotHostApi {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
               listOf(api.requestDefaultBrowserRole())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.openDefaultAppsSettings$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.openDefaultAppsSettings())
             } catch (exception: Throwable) {
               LinkPilotApiPigeonUtils.wrapError(exception)
             }
@@ -893,6 +981,38 @@ interface LinkPilotHostApi {
             val unlockedArg = args[0] as Boolean
             val wrapped: List<Any?> = try {
               listOf(api.setProUnlocked(unlockedArg))
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isOnboardingCompleted$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.isOnboardingCompleted())
+            } catch (exception: Throwable) {
+              LinkPilotApiPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setOnboardingCompleted$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val completedArg = args[0] as Boolean
+            val wrapped: List<Any?> = try {
+              listOf(api.setOnboardingCompleted(completedArg))
             } catch (exception: Throwable) {
               LinkPilotApiPigeonUtils.wrapError(exception)
             }

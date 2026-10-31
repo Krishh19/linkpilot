@@ -12,17 +12,11 @@ import 'package:linkpilot/features/rules/rule_editor_screen.dart';
 import 'package:linkpilot/features/rules/rules_screen.dart';
 import 'package:linkpilot/features/test_url/test_url_screen.dart';
 
-final appRouter = GoRouter(
-  initialLocation: '/',
+GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
+  initialLocation: initialLocation,
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(
-      path: '/rules',
-      builder: (context, state) => const RulesScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(path: '/rules', builder: (context, state) => const RulesScreen()),
     GoRoute(
       path: '/rules/new',
       builder: (context, state) => const RuleEditorScreen(),
@@ -46,14 +40,8 @@ final appRouter = GoRouter(
       path: '/history',
       builder: (context, state) => const HistoryScreen(),
     ),
-    GoRoute(
-      path: '/backup',
-      builder: (context, state) => const BackupScreen(),
-    ),
-    GoRoute(
-      path: '/pro',
-      builder: (context, state) => const ProScreen(),
-    ),
+    GoRoute(path: '/backup', builder: (context, state) => const BackupScreen()),
+    GoRoute(path: '/pro', builder: (context, state) => const ProScreen()),
     GoRoute(
       path: '/test-url',
       builder: (context, state) => const TestUrlScreen(),
@@ -62,13 +50,7 @@ final appRouter = GoRouter(
       path: '/onboarding',
       builder: (context, state) => const OnboardingScreen(),
     ),
-    GoRoute(
-      path: '/help',
-      builder: (context, state) => const HelpScreen(),
-    ),
-    GoRoute(
-      path: '/about',
-      builder: (context, state) => const AboutScreen(),
-    ),
+    GoRoute(path: '/help', builder: (context, state) => const HelpScreen()),
+    GoRoute(path: '/about', builder: (context, state) => const AboutScreen()),
   ],
 );

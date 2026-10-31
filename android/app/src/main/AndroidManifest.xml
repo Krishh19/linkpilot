@@ -61,6 +61,16 @@
             </intent-filter>
         </activity>
 
+        <!-- Custom Tabs provider: lets apps that open links via Custom Tabs (e.g. Reddit)
+             hand the URL to LinkPilot when LinkPilot is the default browser. -->
+        <service
+            android:name=".LinkPilotCustomTabsService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.support.customtabs.action.CustomTabsService" />
+            </intent-filter>
+        </service>
+
         <!-- Quick Settings Tile for Open Copied Link (reads clipboard only on user tap) -->
         <service
             android:name=".tile.LinkPilotTileService"
@@ -84,6 +94,12 @@
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="https" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
         </intent>
 
         <intent>
