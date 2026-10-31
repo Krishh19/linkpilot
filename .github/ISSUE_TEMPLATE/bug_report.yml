@@ -1,0 +1,113 @@
+name: Bug report
+description: Report a routing, default-browser, picker, or UI problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. **Do not include real URLs, browsing history,
+        clipboard contents, account names, or other personal data.** Use
+        `example.com` or another placeholder in every reproduction step.
+
+        Security and privacy problems must be reported privately. See the
+        SECURITY.md file in this repository and the **Security** tab. Do not
+        open a public issue for a vulnerability.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+      placeholder: Tapping a link does not open the browser selected in my rule.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use placeholder URLs only.
+      placeholder: |
+        1. Install LinkPilot 1.0.0 on Android 15.
+        2. Set LinkPilot as the default browser.
+        3. Create a rule for example.com that opens Firefox.
+        4. Tap an example.com link in Reddit.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The link opens in Firefox.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: Chrome opens instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: default_browser
+    attributes:
+      label: Is LinkPilot the Android default browser?
+      options:
+        - "Yes - Home shows LinkPilot is the Default Browser"
+        - "No - Home shows another app"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: input
+    id: resolved_handler
+    attributes:
+      label: App Android currently uses for web links
+      description: Copy the handler line from LinkPilot Home, or leave blank if you cannot open the app.
+      placeholder: Chrome (com.android.chrome)
+
+  - type: input
+    id: linkpilot_version
+    attributes:
+      label: LinkPilot version
+      description: Version and build number from the APK or About screen.
+      placeholder: 1.0.0 (build 1)
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android version and device
+      placeholder: Android 15, Pixel 8
+    validations:
+      required: true
+
+  - type: input
+    id: source_app
+    attributes:
+      label: Source app and target browser
+      description: Where was the link tapped, and which browser did you expect?
+      placeholder: Reddit 2026.x -> Firefox 150
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Remove URLs, titles, clipboard text, account names, and device identifiers before pasting.
+      render: shell
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy checklist
+      options:
+        - label: I removed all real URLs, history entries, clipboard contents, and personal data from this report.
+          required: true
+        - label: This is not a security vulnerability (those must be reported privately per SECURITY.md).
+          required: true
