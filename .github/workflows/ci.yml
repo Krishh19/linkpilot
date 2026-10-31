@@ -2,9 +2,13 @@ name: LinkPilot CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   validate:
@@ -48,3 +52,6 @@ jobs:
             exit 1
           fi
           echo "Manifest permission check passed."
+
+      - name: Build Release APK
+        run: flutter build apk --release
