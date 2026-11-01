@@ -2,6 +2,8 @@
 
 *Working title. Android-first link router built with Flutter and native Kotlin. Version 1.0 draft, 26 October 2026.*
 
+> **Implementation status (1 November 2026).** LinkPilot is open source and every feature is free. The Pro tier, purchase gating, and five-rule free-tier limit described in this draft were removed. References to billing, pricing, and a paid tier in sections 6, 9, 14, 15, and 16 are retained only as design history and no longer describe the product.
+
 ## 1. Overview
 
 **One-liner.** LinkPilot is a default-browser app that never shows a web page. Every link tapped anywhere on the phone passes through it, is cleaned of trackers, and is opened in the browser (and mode) the user chose, either by a saved rule or a one-tap picker.
@@ -93,7 +95,7 @@ Versions below were checked on 26 October 2026. Rule: use the latest stable at p
 | Flutter navigation | go\_router |  |
 | Flutter theming | Material 3, dynamic color, adaptive layouts | Android 17 makes adaptive large-screen UI mandatory for apps targeting API 37, so build responsive layouts from day one. |
 | Localization | `flutter gen-l10n`, English plus extensible ARB files |  |
-| Billing | Google Play Billing via `in_app_purchase`, one non-consumable Pro unlock | Verify the billing library does not force the INTERNET permission. If it does, isolate billing behind a build flavor. |
+| Billing | None. LinkPilot is free and open source, so no in-app purchase library is included. |
 | Quality | flutter\_lints or very\_good\_analysis, ktlint, detekt, mocktail, Robolectric, AndroidX Test, Macrobenchmark |  |
 | CI | GitHub Actions |  |
 
@@ -117,7 +119,7 @@ RouterActivity (native, translucent, exported, browser intent filter)
    |        |                     |
    +--- finish() <----------------+
 
-MainActivity (Flutter) = launcher icon: onboarding, rules editor, browsers, history, backup, Pro
+MainActivity (Flutter) = launcher icon: onboarding, rules editor, browsers, history, backup, settings
         ^ Pigeon API v
 Native platform layer (storage, discovery, launching) shared by both activities
 ```
@@ -221,11 +223,11 @@ Priorities: P0 = MVP, P1 = v1, P2 = later. AC = acceptance criteria.
 - **I1 \[P1\]** Export rules, exceptions, browser order and settings as a versioned JSON file through the system file picker (Storage Access Framework). No storage permission is requested.
 - **I2 \[P1\]** Import validates the schema version, shows a preview (X rules, Y exceptions), and offers merge or replace.
 
-### FR-J. Settings and Pro
+### FR-J. Settings and features
 
 - **J1 \[P0\]** Settings: default browser, cleaner level (Off, Standard, Aggressive), theme, history, haptics.
-- **J2 \[P1\]** Free tier: picker, up to 5 rules, standard cleaning. Pro (one-time purchase): unlimited rules, source-app rules, private-mode routing, backup, themes.
-- **J3 \[P1\]** Pro state is cached locally, and the app works fully offline after the first verification.
+- **J2 \[P1\]** Every feature is available to every user: unlimited rules, source-app rules, private-mode routing, backup, and themes. No account, purchase, or network connection is required.
+- **J3 \[P1\]** All state is stored locally, and the app works fully offline.
 
 ## 8. Data models
 
@@ -296,7 +298,7 @@ The rules file stores `schemaVersion` and has explicit migrations. Unknown futur
 - **History** (if enabled): list, reopen in another browser, clear.
 - **Backup**: export and import.
 - **Help**: in-app browser guide and limits.
-- **Pro** and **About/Privacy**: purchase, restore, privacy statement, open-source licenses.
+- **Settings** and **About/Privacy**: preferences, privacy statement, open-source licenses.
 
 Use adaptive layouts (navigation rail on wide screens, bottom navigation on phones), Material 3 dynamic color, and support light and dark.
 
@@ -315,7 +317,7 @@ Use adaptive layouts (navigation rail on wide screens, bottom navigation on phon
 
 - **RouterActivity**: exported, translucent theme, `launchMode` singleInstance or singleTask with `excludeFromRecents`, taskAffinity empty. Intent filter: action VIEW, categories DEFAULT and BROWSABLE, data schemes http and https (no host). A second filter for ACTION\_SEND with mime type text/plain. Do not add the app-link auto-verify attribute.
 - **MainActivity**: Flutter launcher activity, standard MAIN and LAUNCHER filter.
-- **Permissions**: none required for the core flow. Explicitly avoid QUERY\_ALL\_PACKAGES and INTERNET. Billing may add its own permission.
+- **Permissions**: none required for the core flow. Explicitly avoid QUERY\_ALL\_PACKAGES and INTERNET. No purchase or billing library is included.
 - **`<queries>`**: an intent query for VIEW with https scheme (browser discovery) and one for an installed-app lookup limited to the apps needed for source-app rules (the source app list should come from a user-driven picker rather than broad package visibility).
 - **Quick Settings tile** service for Open copied link.
 - Verify the app qualifies for the browser role on Android 17 devices.
@@ -334,11 +336,11 @@ Use adaptive layouts (navigation rail on wide screens, bottom navigation on phon
 - **PR pipeline.** `flutter analyze`, `flutter test`, `./gradlew :core:test :platform:testDebugUnitTest detekt ktlintCheck lint`, build debug APK, manifest permission check.
 - **Release pipeline.** Signed AAB via Gradle with secrets from CI, mapping file upload, internal testing track.
 - **Play Store.** Accurate listing that states the limits (cannot override hard-coded in-app browsers). Data safety form: no data collected. Prepare a short privacy policy. New personal developer accounts may need a closed testing period before production, so schedule for it.
-- **Distribution.** Play Store first, optionally GitHub releases or F-Droid later with a no-billing flavor.
+- **Distribution.** Play Store first, optionally GitHub releases or F-Droid later.
 
 ## 15. Monetization
 
-Free core with up to 5 rules. One-time Pro unlock, priced low (for example the price of a coffee), no subscription, no ads. Pro features: unlimited rules, source-app rules, private-mode routing, backup, themes. Marketing angle: privacy-first, offline, no tracking.
+LinkPilot is free and open source. There is no Pro tier, purchase, subscription, account, advertising, or paid edition, and no feature is gated. Development is funded by contributors.
 
 ## 16. Milestones and AI-agent build plan
 
@@ -352,7 +354,7 @@ Each milestone has a gate. Do not start the next milestone until the gate passes
 | M3 | Flutter shell | Pigeon API, onboarding, home status, browsers screen, rules list and editor, Test URL panel | Rule created in Flutter changes router behavior with no app restart |
 | M4 | Source-app rules and share | Referrer detection, source-app rules, share target, Open copied link tile, Help screen | All FR-B and FR-C and FR-G acceptance criteria met |
 | M5 | Private mode and capability table | BrowserAdapter, per-browser device testing, capability badges, docs | `docs/browser-capabilities.md` filled from real tests |
-| M6 | Pro, backup, history | Billing, free-tier limits, backup and restore, opt-in history with purge | Restore on a clean install reproduces behavior exactly |
+| M6 | Backup and history | Backup and restore, opt-in history with purge | Restore on a clean install reproduces behavior exactly |
 | M7 | Hardening and launch | Macrobenchmark, Baseline Profile, accessibility pass, privacy and manifest checks, Play listing assets | Closed test clean; vitals within targets |
 
 **Suggested prompting order for the AI IDE:** (1) scaffold and rules for the repo, (2) `:core` with tests first, (3) native router and picker, (4) Pigeon contract, (5) Flutter screens one feature at a time, (6) browser adapters with a device test checklist, (7) release hardening. Ask the agent to state which acceptance criteria each change satisfies.

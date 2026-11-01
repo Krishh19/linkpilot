@@ -7,7 +7,6 @@ import 'package:linkpilot/features/help/help_screen.dart';
 import 'package:linkpilot/features/history/history_screen.dart';
 import 'package:linkpilot/features/home/home_screen.dart';
 import 'package:linkpilot/features/onboarding/onboarding_screen.dart';
-import 'package:linkpilot/features/pro/pro_screen.dart';
 import 'package:linkpilot/features/rules/rule_editor_screen.dart';
 import 'package:linkpilot/features/rules/rules_screen.dart';
 import 'package:linkpilot/features/test_url/test_url_screen.dart';
@@ -41,7 +40,6 @@ GoRouter createAppRouter({String initialLocation = '/'}) => GoRouter(
       builder: (context, state) => const HistoryScreen(),
     ),
     GoRoute(path: '/backup', builder: (context, state) => const BackupScreen()),
-    GoRoute(path: '/pro', builder: (context, state) => const ProScreen()),
     GoRoute(
       path: '/test-url',
       builder: (context, state) => const TestUrlScreen(),

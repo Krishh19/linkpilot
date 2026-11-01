@@ -131,22 +131,3 @@ final historyProvider =
     AsyncNotifierProvider<HistoryNotifier, List<HistoryItemPigeon>>(
       HistoryNotifier.new,
     );
-
-class ProStatusNotifier extends AsyncNotifier<bool> {
-  @override
-  Future<bool> build() async {
-    final repo = ref.watch(linkPilotRepositoryProvider);
-    return repo.isProUnlocked();
-  }
-
-  Future<void> setUnlocked(bool unlocked) async {
-    state = const AsyncLoading();
-    final repo = ref.read(linkPilotRepositoryProvider);
-    await repo.setProUnlocked(unlocked);
-    state = AsyncData(unlocked);
-  }
-}
-
-final proStatusProvider = AsyncNotifierProvider<ProStatusNotifier, bool>(
-  ProStatusNotifier.new,
-);

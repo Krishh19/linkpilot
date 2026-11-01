@@ -85,14 +85,6 @@ class LinkPilotRepository {
     return _api.importBackupJson(json, merge);
   }
 
-  Future<bool> isProUnlocked() async {
-    return _api.isProUnlocked();
-  }
-
-  Future<bool> setProUnlocked(bool unlocked) async {
-    return _api.setProUnlocked(unlocked);
-  }
-
   Future<bool> isOnboardingCompleted() async {
     return _api.isOnboardingCompleted();
   }

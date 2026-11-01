@@ -14,6 +14,8 @@ Android sends every web link to one app: the system default browser. Choosing a 
 
 ## Features
 
+Every feature is free. LinkPilot is open source, with no account, purchase, upsell, or network dependency.
+
 ### Routing
 
 - Exact-domain, wildcard-domain (`*.example.com`), and optional bounded regex rules.
@@ -153,7 +155,7 @@ The authoritative table and device-test notes are in [docs/browser-capabilities.
 
 - This repository contains the Android implementation only.
 - The release build currently signs with the debug keystore so that APKs are easy to test. Configure a real keystore before publishing to a store.
-- LinkPilot Pro is a feature tier with unlimited rules, source-app rules, automated private mode, aggressive cleaning, and full backup/restore. The app currently exposes a local unlock flag for testing; Play Billing is not wired yet.
+- All features are available for free. There is no Pro tier, account, purchase, or in-app billing.
 - Browser-specific behavior is empirical. An intent extra is not considered verified until a physical-device test is recorded.
 
 ## Testing

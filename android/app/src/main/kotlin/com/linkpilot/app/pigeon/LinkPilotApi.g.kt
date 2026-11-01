@@ -703,8 +703,6 @@ interface LinkPilotHostApi {
   fun deleteHistoryItem(id: String): Boolean
   fun exportBackupJson(): String
   fun importBackupJson(json: String, merge: Boolean): BackupSummaryPigeon
-  fun isProUnlocked(): Boolean
-  fun setProUnlocked(unlocked: Boolean): Boolean
   fun isOnboardingCompleted(): Boolean
   fun setOnboardingCompleted(completed: Boolean): Boolean
 
@@ -949,38 +947,6 @@ interface LinkPilotHostApi {
             val mergeArg = args[1] as Boolean
             val wrapped: List<Any?> = try {
               listOf(api.importBackupJson(jsonArg, mergeArg))
-            } catch (exception: Throwable) {
-              LinkPilotApiPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isProUnlocked$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { _, reply ->
-            val wrapped: List<Any?> = try {
-              listOf(api.isProUnlocked())
-            } catch (exception: Throwable) {
-              LinkPilotApiPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setProUnlocked$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val unlockedArg = args[0] as Boolean
-            val wrapped: List<Any?> = try {
-              listOf(api.setProUnlocked(unlockedArg))
             } catch (exception: Throwable) {
               LinkPilotApiPigeonUtils.wrapError(exception)
             }

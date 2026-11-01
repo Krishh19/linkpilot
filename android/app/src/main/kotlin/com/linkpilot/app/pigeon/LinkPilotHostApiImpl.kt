@@ -265,14 +265,6 @@ class LinkPilotHostApiImpl(
         )
     }
 
-    override fun isProUnlocked(): Boolean {
-        return storageManager.isProUnlocked()
-    }
-
-    override fun setProUnlocked(unlocked: Boolean): Boolean {
-        return storageManager.setProUnlocked(unlocked)
-    }
-
     override fun isOnboardingCompleted(): Boolean {
         return storageManager.isOnboardingCompleted()
     }

@@ -5,7 +5,6 @@ import 'package:linkpilot/data/linkpilot_repository.dart';
 import 'package:linkpilot/features/backup/backup_screen.dart';
 import 'package:linkpilot/features/help/help_screen.dart';
 import 'package:linkpilot/features/history/history_screen.dart';
-import 'package:linkpilot/features/pro/pro_screen.dart';
 import 'package:linkpilot/features/test_url/test_url_screen.dart';
 import 'package:linkpilot/generated/linkpilot_api.g.dart';
 import 'package:linkpilot/main.dart';
@@ -103,7 +102,6 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
   }
 
   final List<HistoryItemPigeon> history = [];
-  bool proUnlocked = false;
 
   @override
   Future<bool> openInBrowser(
@@ -136,15 +134,6 @@ class FakeLinkPilotRepository implements LinkPilotRepository {
     required bool merge,
   }) async {
     return BackupSummaryPigeon(ruleCount: 0, schemaVersion: 1, success: true);
-  }
-
-  @override
-  Future<bool> isProUnlocked() async => proUnlocked;
-
-  @override
-  Future<bool> setProUnlocked(bool unlocked) async {
-    proUnlocked = unlocked;
-    return true;
   }
 
   bool onboardingCompleted = true;
@@ -362,32 +351,37 @@ void main() {
     expect(find.text('Replace All'), findsOneWidget);
   });
 
-  testWidgets('ProScreen renders features and handles unlock', (
+  testWidgets('RulesScreen allows more than five rules without a paywall', (
     WidgetTester tester,
   ) async {
     final fakeRepo = FakeLinkPilotRepository();
+    for (var i = 0; i < 6; i++) {
+      fakeRepo.rules.add(
+        RulePigeon(
+          id: 'rule-$i',
+          enabled: true,
+          priority: 10,
+          domains: ['example$i.com'],
+          sourcePackages: const [],
+          actionType: 'ask',
+          createdAtEpochMs: 0,
+          hitCount: 0,
+        ),
+      );
+    }
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [linkPilotRepositoryProvider.overrideWithValue(fakeRepo)],
-        child: const MaterialApp(home: ProScreen()),
+        child: const LinkPilotApp(initialLocation: '/rules'),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Upgrade to LinkPilot Pro'), findsOneWidget);
-    expect(find.text('Saved Routing Rules'), findsOneWidget);
-
-    final unlockFinder = find.text('Unlock Pro (One-Time Purchase)');
-    await tester.scrollUntilVisible(unlockFinder, 200);
-
-    expect(unlockFinder, findsOneWidget);
-
-    // Tap unlock
-    await tester.tap(unlockFinder);
+    await tester.tap(find.text('Add Rule'));
     await tester.pumpAndSettle();
 
-    expect(fakeRepo.proUnlocked, isTrue);
-    expect(find.text('LinkPilot Pro Active'), findsOneWidget);
+    expect(find.text('Create Rule'), findsOneWidget);
+    expect(find.text('Free Tier Limit (5 Rules)'), findsNothing);
   });
 }

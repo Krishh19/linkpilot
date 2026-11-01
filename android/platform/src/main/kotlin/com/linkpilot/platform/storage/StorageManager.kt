@@ -53,7 +53,6 @@ class StorageManager private constructor(context: Context) {
     private val settingsFile = File(context.filesDir, "settings.json")
     private val usageCountersFile = File(context.filesDir, "usage_counters.json")
     private val historyFile = File(context.filesDir, "history.json")
-    private val proPrefs = context.getSharedPreferences("linkpilot_pro", Context.MODE_PRIVATE)
     private val appPrefs = context.getSharedPreferences("linkpilot_app", Context.MODE_PRIVATE)
 
     // In-memory atomic cached snapshots for instant read
@@ -233,17 +232,6 @@ class StorageManager private constructor(context: Context) {
     private fun purgeOldHistory(entries: List<HistoryEntry>, retentionDays: Int): List<HistoryEntry> {
         val cutoff = System.currentTimeMillis() - (retentionDays.coerceAtLeast(1) * 86_400_000L)
         return entries.filter { it.timestampEpochMs >= cutoff }
-    }
-
-    // --- Pro Status (FR-J) ---
-
-    fun isProUnlocked(): Boolean {
-        return proPrefs.getBoolean("pro_unlocked", false)
-    }
-
-    fun setProUnlocked(unlocked: Boolean): Boolean {
-        proPrefs.edit().putBoolean("pro_unlocked", unlocked).apply()
-        return true
     }
 
     // --- First-run setup ---

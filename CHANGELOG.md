@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Nothing yet.
 
+### Changed
+
+- Removed the Pro tier, upgrade screen, and five-rule free-tier limit. Every
+  feature is now available for free, with no account, purchase, or billing code.
+
 ## [1.0.0] - 2026-10-31
 
 First public repository release.
@@ -39,7 +44,6 @@ First public repository release.
   default-browser eligibility, and Custom Tabs readiness.
 - Custom Tabs provider so apps that consult the default browser can hand links
   to LinkPilot.
-- Free and Pro feature tiers, with Pro currently exposed as a local test unlock.
 - JVM routing tests, manifest/privacy audit tests, Flutter widget tests, and ADB
   scenario scripts.
 - Architecture decision records and an empirical browser capability matrix.

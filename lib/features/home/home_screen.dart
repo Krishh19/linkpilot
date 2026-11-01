@@ -215,10 +215,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Expanded(
                   child: _buildMetricCard(
                     context,
-                    title: 'Pro',
-                    subtitle: 'Unlimited & offline',
-                    icon: Icons.workspace_premium_outlined,
-                    onTap: () => context.push('/pro'),
+                    title: 'About',
+                    subtitle: 'Privacy & open source',
+                    icon: Icons.info_outline,
+                    onTap: () => context.push('/about'),
                   ),
                 ),
               ],

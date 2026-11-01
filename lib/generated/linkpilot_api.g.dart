@@ -971,44 +971,6 @@ class LinkPilotHostApi {
     return pigeonVar_replyValue! as BackupSummaryPigeon;
   }
 
-  Future<bool> isProUnlocked() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isProUnlocked$pigeonVar_messageChannelSuffix';
-    final pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
-    );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
-    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
-
-    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
-    return pigeonVar_replyValue! as bool;
-  }
-
-  Future<bool> setProUnlocked(bool unlocked) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.setProUnlocked$pigeonVar_messageChannelSuffix';
-    final pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
-    );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[unlocked]);
-    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
-
-    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
-    return pigeonVar_replyValue! as bool;
-  }
-
   Future<bool> isOnboardingCompleted() async {
     final pigeonVar_channelName = 'dev.flutter.pigeon.linkpilot.LinkPilotHostApi.isOnboardingCompleted$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(

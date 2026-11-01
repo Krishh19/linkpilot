@@ -165,10 +165,6 @@ abstract class LinkPilotHostApi {
   String exportBackupJson();
   BackupSummaryPigeon importBackupJson(String json, bool merge);
 
-  // Pro & Free Tier (FR-J)
-  bool isProUnlocked();
-  bool setProUnlocked(bool unlocked);
-
   // First-run setup
   bool isOnboardingCompleted();
   bool setOnboardingCompleted(bool completed);
