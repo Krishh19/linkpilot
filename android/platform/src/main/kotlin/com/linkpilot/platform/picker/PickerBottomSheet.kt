@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.linkpilot.core.model.Mode
 import com.linkpilot.platform.browser.BrowserApp
+import com.linkpilot.platform.browser.LinkHandlerApp
 
 enum class RuleCreationChoice {
     JUST_ONCE,
@@ -80,8 +83,10 @@ fun PickerBottomSheet(
     removedParams: List<String>,
     sourcePackage: String?,
     browsers: List<BrowserApp>,
+    apps: List<LinkHandlerApp> = emptyList(),
     launchErrorMessage: String? = null,
     onSelect: (pkg: String, mode: Mode, choice: RuleCreationChoice, urlToOpen: String) -> Unit,
+    onOpenApp: (pkg: String, url: String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -110,6 +115,7 @@ fun PickerBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -178,7 +184,7 @@ fun PickerBottomSheet(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // URL Header with Copy & Share
+                // URL Header with Share
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -195,21 +201,6 @@ fun PickerBottomSheet(
 
                     IconButton(
                         onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("URL", activeUrl))
-                            Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy link",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, activeUrl)
@@ -223,6 +214,61 @@ fun PickerBottomSheet(
                             contentDescription = "Share link",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+
+                // Explicit copy actions: the original link and the tracker-free link.
+                val canCopyOriginal = !originalUrl.isNullOrBlank()
+                val hasCleanDifference = canCopyOriginal && originalUrl != cleanedUrl
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            copyToClipboard(
+                                context = context,
+                                text = originalUrl ?: cleanedUrl,
+                                message = "Link copied"
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Copy link", fontSize = 13.sp, maxLines = 1)
+                    }
+
+                    if (hasCleanDifference) {
+                        OutlinedButton(
+                            onClick = {
+                                copyToClipboard(
+                                    context = context,
+                                    text = cleanedUrl,
+                                    message = "Clean link copied"
+                                )
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Copy clean", fontSize = 13.sp, maxLines = 1)
+                        }
                     }
                 }
 
@@ -244,6 +290,32 @@ fun PickerBottomSheet(
                                 onSelect(browser.packageName, Mode.PRIVATE, RuleCreationChoice.JUST_ONCE, activeUrl)
                             }
                         )
+                    }
+                }
+
+                if (apps.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(
+                        text = "Open in app",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(apps) { app ->
+                            LinkHandlerItem(
+                                app = app,
+                                onOpen = { onOpenApp(app.packageName, activeUrl) }
+                            )
+                        }
                     }
                 }
 
@@ -394,6 +466,69 @@ fun BrowserItem(
             textAlign = TextAlign.Center
         )
     }
+}
+
+@Composable
+fun LinkHandlerItem(
+    app: LinkHandlerApp,
+    onOpen: () -> Unit
+) {
+    val bitmap = remember(app.icon) {
+        app.icon?.toBitmap()
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onOpen)
+            .padding(8.dp)
+            .width(72.dp)
+            .semantics {
+                contentDescription = "Open in ${app.label}"
+                role = Role.Button
+            }
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = app.label.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = app.label,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+private fun copyToClipboard(context: Context, text: String, message: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("URL", text))
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
 private fun Drawable.toBitmap(): Bitmap {

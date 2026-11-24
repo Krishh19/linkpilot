@@ -18,6 +18,7 @@ import com.linkpilot.core.model.PickerReason
 import com.linkpilot.core.rules.RuleDrafts
 import com.linkpilot.platform.browser.BrowserDiscovery
 import com.linkpilot.platform.browser.BrowserLauncher
+import com.linkpilot.platform.browser.LinkHandlerDiscovery
 import com.linkpilot.platform.picker.PickerBottomSheet
 import com.linkpilot.platform.picker.RuleCreationChoice
 import com.linkpilot.platform.storage.StorageManager
@@ -27,6 +28,7 @@ class RouterActivity : ComponentActivity() {
     private lateinit var storageManager: StorageManager
     private lateinit var browserDiscovery: BrowserDiscovery
     private lateinit var browserLauncher: BrowserLauncher
+    private lateinit var linkHandlerDiscovery: LinkHandlerDiscovery
     private lateinit var engine: LinkRouterEngine
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +37,7 @@ class RouterActivity : ComponentActivity() {
         storageManager = StorageManager.get(applicationContext)
         browserDiscovery = BrowserDiscovery(applicationContext)
         browserLauncher = BrowserLauncher(applicationContext)
+        linkHandlerDiscovery = LinkHandlerDiscovery(applicationContext)
         engine = LinkRouterEngine.create(storageManager.getCleanerConfig())
 
         handleIntent(intent)
@@ -130,6 +133,10 @@ class RouterActivity : ComponentActivity() {
     ) {
         val usageCounters = storageManager.getUsageCounters()
         val browsers = browserDiscovery.getInstalledBrowsers(usageCounters)
+        val handlerApps = linkHandlerDiscovery.getInstalledHandlers(
+            url = cleanedUrl,
+            excludedPackages = browsers.map { it.packageName }.toSet()
+        )
 
         if (browsers.isEmpty()) {
             openSystemChooser(cleanedUrl)
@@ -145,6 +152,7 @@ class RouterActivity : ComponentActivity() {
                     removedParams = removedParams,
                     sourcePackage = sourcePackage,
                     browsers = browsers,
+                    apps = handlerApps,
                     launchErrorMessage = launchError,
                     onSelect = { selectedPkg, mode, choice, urlToOpen ->
                         handleUserChoice(
@@ -154,6 +162,9 @@ class RouterActivity : ComponentActivity() {
                             mode = mode,
                             choice = choice
                         )
+                    },
+                    onOpenApp = { selectedPkg, urlToOpen ->
+                        handleOpenInApp(urlToOpen = urlToOpen, selectedPkg = selectedPkg)
                     },
                     onDismiss = {
                         finishQuietly()
@@ -210,6 +221,16 @@ class RouterActivity : ComponentActivity() {
             Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_LONG).show()
         }
         finishQuietly()
+    }
+
+    private fun handleOpenInApp(urlToOpen: String, selectedPkg: String) {
+        val launched = browserLauncher.launch(urlToOpen, selectedPkg, Mode.NORMAL)
+        if (launched) {
+            storageManager.addHistoryItem(urlToOpen, selectedPkg)
+            finishQuietly()
+        } else {
+            Toast.makeText(this, R.string.launch_failed, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun extractUrlFromIntent(intent: Intent): String? {
